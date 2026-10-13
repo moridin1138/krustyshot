@@ -3,6 +3,7 @@ name = "rustshot-editor"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 
 [dependencies]
 ab_glyph = "0.2"

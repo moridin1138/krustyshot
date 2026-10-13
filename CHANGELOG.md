@@ -21,4 +21,4 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - App icon, `cargo xtask icons` to regenerate it, and macOS bundle metadata.
 - CI on macOS, Windows and Linux, and a tag-driven release workflow.
 
-[Unreleased]: https://github.com/OWNER/rustshot/commits/main
+[Unreleased]: https://github.com/moridin1138/rustshot/commits/main

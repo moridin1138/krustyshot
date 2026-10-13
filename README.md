@@ -48,7 +48,7 @@ On Windows and Linux use Ctrl instead of ⌘.
 
 ## Install
 
-Download the package for your platform from the GitHub Releases page.
+Download the package for your platform from the [releases page](https://github.com/moridin1138/rustshot/releases).
 
 - **macOS:** unzip and move `Rustshot.app` to Applications. Builds are not yet signed, so the first time right-click the app and choose Open.
 - **Windows:** unzip and run `rustshot.exe`.
@@ -107,4 +107,4 @@ Settings live in `rustshot.toml` in the platform config folder:
 
 ## License
 
-GPL-3.0-or-later.
+Rustshot is free software under the [GNU General Public License v3.0 or later](LICENSE).
