@@ -8,7 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [0.1.0] - 2026-10-13
 
-First release.
+First release, licensed under the [PolyForm Shield License 1.0.0](LICENSE): free for any use, including commercial, except providing a product that competes with Rustshot.
 
 ### Added
 

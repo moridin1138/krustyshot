@@ -29,7 +29,7 @@
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>GPL-3.0-or-later</string>
+	<string>Copyright © 2026 moridin1138. PolyForm Shield 1.0.0.</string>
 	<key>NSScreenCaptureUsageDescription</key>
 	<string>Rustshot needs screen recording access to take screenshots.</string>
 </dict>

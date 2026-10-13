@@ -103,9 +103,17 @@ Settings live in `rustshot.toml` in the platform config folder:
 
 ## Credits
 
-- Inspired by [Greenshot](https://getgreenshot.org/). Rustshot is a new implementation and contains no Greenshot code.
+- Inspired by [Greenshot](https://getgreenshot.org/) (GPL-3.0). Rustshot is a new implementation and contains no Greenshot code.
 - Icons: [Phosphor Icons](https://phosphoricons.com/) (MIT), via [egui-phosphor](https://github.com/amPerl/egui-phosphor).
 
 ## License
 
-Rustshot is free software under the [GNU General Public License v3.0 or later](LICENSE).
+Rustshot is source-available under the [PolyForm Shield License 1.0.0](LICENSE).
+
+In plain terms (the licence text is what counts):
+
+- You can use Rustshot for free for any purpose, including at work and for commercial projects.
+- You can read, modify and share the code, as long as you pass on the licence.
+- You can't sell Rustshot, or offer a product or service that competes with it, including a repackaged or rebranded version.
+
+The commits made before the 0.1.0 release were published under GPL-3.0-or-later. Every release, starting with 0.1.0, uses the PolyForm Shield licence.

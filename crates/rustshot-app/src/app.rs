@@ -226,7 +226,7 @@ impl App {
                     "Rustshot ",
                     env!("CARGO_PKG_VERSION"),
                     "\n\nA cross-platform screenshot tool inspired by Greenshot, written in Rust with egui.\n\n",
-                    "Licensed under the GPL v3 or later."
+                    "Licensed under the PolyForm Shield License 1.0.0: free for any use, including commercial,\nexcept providing a product that competes with Rustshot."
                 ),
                 false,
             ),
