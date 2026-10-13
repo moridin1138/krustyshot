@@ -84,6 +84,7 @@ impl App {
         let ctx = cc.egui_ctx.clone();
         // Cmd +/- are used for canvas zoom in the editor.
         ctx.options_mut(|o| o.zoom_with_keyboard = false);
+        rustshot_editor::install_fonts(&ctx);
 
         let (tx, rx) = channel();
         {
@@ -396,7 +397,7 @@ impl App {
             ];
             let dirty = if ew.editor.is_dirty() { " •" } else { "" };
             let builder = egui::ViewportBuilder::default()
-                .with_title(format!("Rustshot – {}{dirty}", ew.editor.title))
+                .with_title(format!("Rustshot: {}{dirty}", ew.editor.title))
                 .with_inner_size(size)
                 .with_min_inner_size([620.0, 420.0]);
             let (requests, close_requested) = ctx.show_viewport_immediate(ew.id, builder, |ui, _| {

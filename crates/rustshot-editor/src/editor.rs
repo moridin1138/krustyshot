@@ -76,6 +76,22 @@ impl Tool {
         }
     }
 
+    fn icon(self) -> &'static str {
+        use egui_phosphor::regular as icon;
+        match self {
+            Tool::Select => icon::CURSOR,
+            Tool::Rect => icon::SQUARE,
+            Tool::Ellipse => icon::CIRCLE,
+            Tool::Line => icon::LINE_SEGMENT,
+            Tool::Arrow => icon::ARROW_UP_RIGHT,
+            Tool::Freehand => icon::PENCIL_SIMPLE,
+            Tool::Text => icon::TEXT_T,
+            Tool::Highlight => icon::HIGHLIGHTER,
+            Tool::Obfuscate => icon::CHECKERBOARD,
+            Tool::Crop => icon::CROP,
+        }
+    }
+
     /// Greenshot-style single-letter shortcuts.
     fn key(self) -> Key {
         match self {
@@ -351,43 +367,43 @@ impl Editor {
     }
 
     fn toolbar(&mut self, ui: &mut Ui, requests: &mut Vec<EditorRequest>) {
+        use egui_phosphor::regular as icon;
         ui.horizontal_wrapped(|ui| {
-            if ui.button("Save").on_hover_text("Save to the output folder (⌘S)").clicked() {
+            ui.spacing_mut().item_spacing.x = 4.0;
+            if icon_button(ui, icon::FLOPPY_DISK, true, "Save to the output folder (⌘S)").clicked() {
                 requests.push(EditorRequest::Save);
             }
-            if ui.button("Save as…").on_hover_text("⌘⇧S").clicked() {
+            if icon_button(ui, icon::FLOPPY_DISK_BACK, true, "Save as… (⌘⇧S)").clicked() {
                 requests.push(EditorRequest::SaveAs);
             }
-            if ui.button("Copy").on_hover_text("Copy image to clipboard (⌘C)").clicked() {
+            if icon_button(ui, icon::COPY, true, "Copy image to clipboard (⌘C)").clicked() {
                 requests.push(EditorRequest::Copy);
             }
             ui.separator();
-            if ui.add_enabled(self.history.can_undo(), egui::Button::new("Undo")).clicked() {
+            if icon_button(ui, icon::ARROW_COUNTER_CLOCKWISE, self.history.can_undo(), "Undo (⌘Z)").clicked() {
                 self.undo();
             }
-            if ui.add_enabled(self.history.can_redo(), egui::Button::new("Redo")).clicked() {
+            if icon_button(ui, icon::ARROW_CLOCKWISE, self.history.can_redo(), "Redo (⌘⇧Z)").clicked() {
                 self.redo();
             }
-            if ui.add_enabled(self.selected.is_some(), egui::Button::new("Delete")).clicked() {
+            if icon_button(ui, icon::TRASH, self.selected.is_some(), "Delete selected (Delete)").clicked() {
                 self.delete_selected();
             }
             ui.separator();
             for tool in Tool::ALL {
                 let key = if tool == Tool::Select { "Esc".to_string() } else { format!("{:?}", tool.key()) };
-                if ui
-                    .selectable_label(self.tool == tool, tool.label())
-                    .on_hover_text(format!("{} ({key})", tool.label()))
-                    .clicked()
-                {
+                let button = egui::Button::selectable(self.tool == tool, egui::RichText::new(tool.icon()).size(ICON_SIZE))
+                    .min_size(egui::vec2(30.0, 28.0));
+                if ui.add(button).on_hover_text(format!("{} ({key})", tool.label())).clicked() {
                     self.set_tool(tool);
                 }
             }
             if self.crop_rect.is_some() {
                 ui.separator();
-                if ui.button("✔ Apply crop").on_hover_text("Enter").clicked() {
+                if ui.button(format!("{} Apply crop", icon::CHECK)).on_hover_text("Enter").clicked() {
                     self.apply_crop();
                 }
-                if ui.button("Cancel crop").clicked() {
+                if ui.button(format!("{} Cancel", icon::X)).on_hover_text("Esc").clicked() {
                     self.crop_rect = None;
                 }
             }
@@ -725,6 +741,20 @@ impl Editor {
             self.finish_text_edit();
         }
     }
+}
+
+const ICON_SIZE: f32 = 18.0;
+
+fn icon_button(ui: &mut Ui, glyph: &str, enabled: bool, tooltip: &str) -> egui::Response {
+    let button = egui::Button::new(egui::RichText::new(glyph).size(ICON_SIZE)).min_size(egui::vec2(30.0, 28.0));
+    ui.add_enabled(enabled, button).on_hover_text(tooltip).on_disabled_hover_text(tooltip)
+}
+
+/// Make the Phosphor icon font available. Call once at startup.
+pub fn install_fonts(ctx: &egui::Context) {
+    let mut fonts = egui::FontDefinitions::default();
+    egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
+    ctx.set_fonts(fonts);
 }
 
 /// Shift-drag: squares/circles for boxes, 45° steps for lines.

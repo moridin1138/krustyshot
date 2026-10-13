@@ -1,3 +1,6 @@
+// No console window on Windows release builds.
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+
 //! Rustshot: a cross-platform screenshot tool modelled on Greenshot.
 
 mod app;

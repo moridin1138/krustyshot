@@ -1,19 +1,23 @@
 # Rustshot
 
-A cross-platform screenshot tool modelled on [Greenshot](https://getgreenshot.org/), written in Rust with [egui](https://github.com/emilk/egui). Runs on macOS, Windows and Linux.
+A cross-platform screenshot tool modelled on [Greenshot](https://getgreenshot.org/), written in Rust with [egui](https://github.com/emilk/egui). It runs on macOS, Windows and Linux.
 
-## Features (Phase 1)
+<img src="assets/icons/icon_256.png" width="96" alt="Rustshot icon">
+
+## Features
 
 - Menu-bar / tray icon with a capture menu
-- Global hotkeys for region, window, full screen and last region
-- Frozen-screen region selection with crosshair, magnifier and pixel-size readout
+- Global hotkeys for region, window, full screen and last region captures
+- Frozen-screen region selection with crosshair, magnifier and a pixel-size readout
 - Window capture: hover to highlight, click to capture (Space switches between region and window mode, like Greenshot)
 - Full-screen capture of all monitors, stitched together
-- "Capture last region"
+- Capture last region
 - Destination picker after each capture: open in editor, copy, save directly, save as
-- Image editor: select / move / resize, rectangle, ellipse, line, arrow, freehand, text, highlight, obfuscate (pixelate or blur), crop, undo/redo, line colour, thickness and fill
+- Image editor with Phosphor icons: select, move and resize, rectangle, ellipse, line, arrow, freehand, text, highlight, obfuscate (pixelate or blur), crop, undo and redo, line colour, thickness and fill
 - Open an image from the clipboard or from a file
 - Preferences: hotkeys, destinations, output folder, Greenshot-style filename pattern, PNG/JPG/BMP/GIF, JPEG quality
+
+See [CHANGELOG.md](CHANGELOG.md) for what changed in each version and [docs/ROADMAP.md](docs/ROADMAP.md) for what's planned.
 
 ## Default hotkeys
 
@@ -24,56 +28,83 @@ A cross-platform screenshot tool modelled on [Greenshot](https://getgreenshot.or
 | Capture full screen | ⌥⇧F | Ctrl+Print Screen |
 | Capture last region | ⌥⇧L | Shift+Print Screen |
 
-You can change them in Preferences. macOS keeps ⌘⇧3/4/5 for itself.
+Change them in Preferences. macOS keeps ⌘⇧3/4/5 for its own screenshot tool.
 
 ### Editor shortcuts
 
-`R` rectangle, `E` ellipse, `L` line, `A` arrow, `F` freehand, `T` text, `H` highlight, `O` obfuscate, `C` crop, `Esc` select. ⌘Z / ⌘⇧Z undo/redo, Delete removes the selection, Enter applies a crop, Shift while drawing makes squares/circles or snaps lines to 45°, ⌘S save, ⌘⇧S save as, ⌘C copy, ⌘+/⌘−/⌘0 zoom.
+| Key | Action |
+|---|---|
+| `R` `E` `L` `A` `F` `T` `H` `O` `C` | Rectangle, ellipse, line, arrow, freehand, text, highlight, obfuscate, crop |
+| `Esc` | Select tool (or cancel crop / clear selection) |
+| Shift while drawing | Squares and circles; lines snap to 45° |
+| Delete | Remove the selected annotation |
+| Enter | Apply crop |
+| ⌘Z / ⌘⇧Z | Undo / redo |
+| ⌘S / ⌘⇧S | Save / save as |
+| ⌘C | Copy image |
+| ⌘+ / ⌘− / ⌘0 | Zoom in / out / fit |
 
-## Build and run
+On Windows and Linux use Ctrl instead of ⌘.
+
+## Install
+
+Download the package for your platform from the GitHub Releases page.
+
+- **macOS:** unzip and move `Rustshot.app` to Applications. Builds are not yet signed, so the first time right-click the app and choose Open.
+- **Windows:** unzip and run `rustshot.exe`.
+- **Linux:** extract and run `rustshot`. It needs GTK 3 and an appindicator library.
+
+### macOS permissions
+
+Captures need **Screen Recording** permission. Enable it in System Settings → Privacy & Security → Screen Recording for Rustshot (or for your terminal when running with `cargo run`), then restart Rustshot.
+
+## Build from source
+
+You need a stable Rust toolchain ([rustup](https://rustup.rs/)).
 
 ```bash
 cargo run --release -p rustshot-app
 ```
 
-On macOS, if `cargo` is not found, Homebrew's rustup is not on your PATH:
+On Linux, install the system libraries listed in [.github/workflows/ci.yml](.github/workflows/ci.yml) first.
 
-```bash
-echo 'export PATH="/opt/homebrew/opt/rustup/bin:$PATH"' >> ~/.zshrc
-```
-
-### macOS permissions
-
-The first capture needs **Screen Recording** permission. Enable it in System Settings → Privacy & Security → Screen Recording for Rustshot (or for your terminal when running with `cargo run`), then restart Rustshot.
-
-### macOS app bundle
+Build a macOS app bundle:
 
 ```bash
 cargo install cargo-bundle
 cargo bundle --release -p rustshot-app
 ```
 
-This produces `target/release/bundle/osx/Rustshot.app`, which runs as a menu-bar app with no Dock icon.
+The bundle is written to `target/release/bundle/osx/Rustshot.app` and runs as a menu-bar app with no Dock icon.
 
-### Linux
+### Development commands
 
-You need GTK and appindicator development packages (see `.github/workflows/ci.yml`). Global hotkeys and window picking need X11; under Wayland use the tray menu.
-
-## Layout
-
-| Crate | Purpose |
+| Command | What it does |
 |---|---|
-| `crates/rustshot-core` | Capture (xcap), config, filename patterns, saving, clipboard |
-| `crates/rustshot-editor` | Annotation editor UI, document model, export renderer |
-| `crates/rustshot-app` | Tray, hotkeys, capture overlay, windows (the `rustshot` binary) |
+| `cargo test` | Run the unit tests |
+| `cargo clippy --all-targets -- -D warnings` | Lint (CI fails on any warning) |
+| `cargo xtask icons` | Regenerate the app icons in `assets/icons/` |
 
-Settings are stored in `rustshot.toml` in the platform config folder (on macOS: `~/Library/Application Support/org.Rustshot.Rustshot/`).
+## Project documents
 
-## Roadmap
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): how the code is organised and how a capture flows through it
+- [docs/RELEASING.md](docs/RELEASING.md): versioning rules and the release checklist
+- [docs/ROADMAP.md](docs/ROADMAP.md): planned phases and the backlog
+- [CHANGELOG.md](CHANGELOG.md): release history
 
-- **Phase 2:** speech bubbles, step counters, more highlight modes (text, grayscale, magnify), drop shadows, effects (torn edges, border, grayscale, invert, rotate, resize), mouse pointer in captures, capture delay, notifications
-- **Phase 3:** printing, open in external app, email, upload plugins (Imgur etc.), OCR
+## Settings
+
+Settings live in `rustshot.toml` in the platform config folder:
+
+- macOS: `~/Library/Application Support/org.Rustshot.Rustshot/`
+- Windows: `%APPDATA%\Rustshot\Rustshot\config\`
+- Linux: `~/.config/rustshot/`
+
+## Credits
+
+- Inspired by [Greenshot](https://getgreenshot.org/). Rustshot is a new implementation and contains no Greenshot code.
+- Icons: [Phosphor Icons](https://phosphoricons.com/) (MIT), via [egui-phosphor](https://github.com/amPerl/egui-phosphor).
 
 ## License
 
-GPL-3.0-or-later (the same licence as Greenshot).
+GPL-3.0-or-later.

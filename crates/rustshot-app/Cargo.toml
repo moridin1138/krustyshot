@@ -1,6 +1,6 @@
 [package]
 name = "rustshot-app"
-version = "0.1.0"
+version.workspace = true
 edition.workspace = true
 license.workspace = true
 
@@ -33,4 +33,11 @@ path = "src/main.rs"
 name = "Rustshot"
 identifier = "org.rustshot.Rustshot"
 short_description = "Cross-platform screenshot tool inspired by Greenshot"
+icon = [
+    "../../assets/icons/icon_32.png",
+    "../../assets/icons/icon_128.png",
+    "../../assets/icons/icon_256.png",
+    "../../assets/icons/icon_512.png",
+    "../../assets/icons/icon_1024.png",
+]
 osx_info_plist_exts = ["bundle/Info.plist.ext"]

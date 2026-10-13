@@ -6,4 +6,4 @@ mod editor;
 pub mod export;
 pub mod raster;
 
-pub use editor::{Editor, EditorRequest};
+pub use editor::{install_fonts, Editor, EditorRequest};
