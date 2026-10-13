@@ -37,7 +37,7 @@ There are three coordinate spaces, and mixing them up is the most likely source 
 
 eframe always has a root window. Rustshot keeps it as a 1×1, transparent, click-through window placed off-screen, and opens everything else as child viewports. The root can't simply be hidden: eframe stops running the UI of a hidden root, and child windows can only be opened from that UI.
 
-On macOS the event loop is set to the Accessory activation policy, so there is no Dock icon or app menu (`platform.rs`). The bundle's `Info.plist` adds `LSUIElement` for the same effect when launched as an `.app`.
+On macOS the event loop is set to the Accessory activation policy, so there is no Dock icon or app menu (`platform.rs`). The bundle's `Info.plist` (`crates/rustshot-app/bundle/Info.plist`, filled in by `scripts/bundle-macos.sh`) sets `LSUIElement` for the same effect when launched as an `.app`.
 
 Tray menu clicks and hotkey presses arrive on callbacks. These push an `AppEvent` onto a channel and call `request_repaint()`; `App::logic` drains the channel on the next frame.
 

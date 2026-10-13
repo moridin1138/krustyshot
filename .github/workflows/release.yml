@@ -39,7 +39,7 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             name: windows-x86_64
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             name: linux-x86_64
     runs-on: ${{ matrix.os }}
@@ -61,9 +61,8 @@ jobs:
       - name: Package (macOS .app)
         if: runner.os == 'macOS'
         run: |
-          cargo install cargo-bundle --locked
-          cargo bundle --release -p rustshot-app --target ${{ matrix.target }}
-          cd target/${{ matrix.target }}/release/bundle/osx
+          scripts/bundle-macos.sh ${{ matrix.target }}
+          cd target/${{ matrix.target }}/release/bundle
           ditto -c -k --keepParent Rustshot.app "$GITHUB_WORKSPACE/Rustshot-${GITHUB_REF_NAME}-${{ matrix.name }}.zip"
       - name: Package (Windows)
         if: runner.os == 'Windows'

@@ -71,11 +71,11 @@ On Linux, install the system libraries listed in [.github/workflows/ci.yml](.git
 Build a macOS app bundle:
 
 ```bash
-cargo install cargo-bundle
-cargo bundle --release -p rustshot-app
+cargo build --release -p rustshot-app
+scripts/bundle-macos.sh
 ```
 
-The bundle is written to `target/release/bundle/osx/Rustshot.app` and runs as a menu-bar app with no Dock icon.
+The bundle is written to `target/release/bundle/Rustshot.app` and runs as a menu-bar app with no Dock icon.
 
 ### Development commands
 
@@ -84,6 +84,7 @@ The bundle is written to `target/release/bundle/osx/Rustshot.app` and runs as a 
 | `cargo test` | Run the unit tests |
 | `cargo clippy --all-targets -- -D warnings` | Lint (CI fails on any warning) |
 | `cargo xtask icons` | Regenerate the app icons in `assets/icons/` |
+| `scripts/bundle-macos.sh` | Package a release build as `Rustshot.app` (macOS) |
 
 ## Project documents
 

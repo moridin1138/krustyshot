@@ -28,17 +28,3 @@ objc2-foundation = "0.3"
 name = "rustshot"
 path = "src/main.rs"
 
-# `cargo install cargo-bundle && cargo bundle --release -p rustshot-app`
-# produces Rustshot.app on macOS. LSUIElement keeps it out of the Dock.
-[package.metadata.bundle]
-name = "Rustshot"
-identifier = "org.rustshot.Rustshot"
-short_description = "Cross-platform screenshot tool inspired by Greenshot"
-icon = [
-    "../../assets/icons/icon_32.png",
-    "../../assets/icons/icon_128.png",
-    "../../assets/icons/icon_256.png",
-    "../../assets/icons/icon_512.png",
-    "../../assets/icons/icon_1024.png",
-]
-osx_info_plist_exts = ["bundle/Info.plist.ext"]

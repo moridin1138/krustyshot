@@ -1,4 +1,0 @@
-<key>LSUIElement</key>
-<true/>
-<key>NSScreenCaptureUsageDescription</key>
-<string>Rustshot needs screen recording access to take screenshots.</string>
