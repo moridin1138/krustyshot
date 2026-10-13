@@ -12,7 +12,7 @@ jobs:
   check-version:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Tag matches Cargo.toml version
         run: |
           tag="${GITHUB_REF_NAME#v}"
@@ -44,7 +44,7 @@ jobs:
             name: linux-x86_64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -82,7 +82,7 @@ jobs:
           cp target/${{ matrix.target }}/release/rustshot README.md CHANGELOG.md "$dir"/
           cp LICENSE "$dir"/ 2>/dev/null || true
           tar czf "$dir.tar.gz" "$dir"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.name }}
           path: |
@@ -93,8 +93,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
@@ -109,7 +109,7 @@ jobs:
           cat notes.md
       - name: Checksums
         run: cd dist && sha256sum * > SHA256SUMS.txt
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           draft: true
           prerelease: ${{ startsWith(github.ref_name, 'v0.') || contains(github.ref_name, '-') }}
