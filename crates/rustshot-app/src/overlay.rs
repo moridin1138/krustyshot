@@ -51,7 +51,7 @@ impl Overlay {
             let r = self.snapshot.monitors[i].rect;
             let id = egui::ViewportId::from_hash_of(("rustshot-overlay", i));
             let builder = egui::ViewportBuilder::default()
-                .with_title(platform::OVERLAY_TITLE)
+                .with_title(platform::overlay_title(i))
                 .with_position([r.x as f32, r.y as f32])
                 .with_inner_size([r.w as f32, r.h as f32])
                 .with_decorations(false)
@@ -65,11 +65,11 @@ impl Overlay {
                 ctx.send_viewport_cmd_to(id, egui::ViewportCommand::Focus);
             }
         }
-        if self.frames < 10 {
-            platform::raise_overlays();
-            if self.frames == 0 {
-                platform::activate_app();
-            }
+        // Cheap, and catches the OS moving or resizing the windows after creation.
+        let rects: Vec<Region> = self.snapshot.monitors.iter().map(|m| m.rect).collect();
+        platform::raise_overlays(&rects);
+        if self.frames == 0 {
+            platform::activate_app();
         }
         self.frames += 1;
         self.outcome.take()
@@ -109,13 +109,25 @@ impl Overlay {
             })
             .clone();
 
-        let sx = mon.w / screen.width().max(1.0) as f64;
-        let sy = mon.h / screen.height().max(1.0) as f64;
-        let to_global = |p: Pos2| (mon.x + (p.x - screen.min.x) as f64 * sx, mon.y + (p.y - screen.min.y) as f64 * sy);
+        // Where this window really is on the desktop. The OS may not have
+        // given us exactly the monitor's bounds (macOS keeps windows below the
+        // menu bar until `raise_overlays` resizes them), so draw the frozen
+        // screenshot at the monitor's true position rather than stretching it
+        // to fit the window.
+        let window = ui.input(|inp| inp.viewport().inner_rect);
+        let origin = match window {
+            Some(w) => (w.min.x as f64, w.min.y as f64),
+            None => (mon.x, mon.y),
+        };
+        if self.frames == 5 {
+            log::debug!("overlay {i}: monitor {mon:?}, window {window:?}, ui {screen:?}");
+        }
+        let to_global = |p: Pos2| (origin.0 + (p.x - screen.min.x) as f64, origin.1 + (p.y - screen.min.y) as f64);
         let to_local = |x: f64, y: f64| {
-            Pos2::new(screen.min.x + ((x - mon.x) / sx) as f32, screen.min.y + ((y - mon.y) / sy) as f32)
+            Pos2::new(screen.min.x + (x - origin.0) as f32, screen.min.y + (y - origin.1) as f32)
         };
         let to_local_rect = |r: Region| Rect::from_min_max(to_local(r.x, r.y), to_local(r.right(), r.bottom()));
+        let monitor_rect = to_local_rect(mon);
 
         // ---- input ----
         let (pos, pressed, released, esc, space) = ui.input(|inp| {
@@ -167,7 +179,8 @@ impl Overlay {
         // ---- painting ----
         let painter = ui.painter();
         let full_uv = Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0));
-        painter.image(tex.id(), screen, full_uv, Color32::WHITE);
+        painter.rect_filled(screen, 0.0, Color32::BLACK);
+        painter.image(tex.id(), monitor_rect, full_uv, Color32::WHITE);
         let shade = Color32::from_black_alpha(110);
 
         let highlight = self.highlight();

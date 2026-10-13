@@ -13,28 +13,50 @@ pub fn configure_event_loop<T>(builder: &mut winit::event_loop::EventLoopBuilder
 
 pub const OVERLAY_TITLE: &str = "Rustshot Overlay";
 
-/// Lift the capture overlay above the menu bar and Dock, and make it appear
-/// on the current Space even when another app is full screen.
-pub fn raise_overlays() {
+/// Window title for the overlay on monitor `i`, so each window can be found again.
+pub fn overlay_title(i: usize) -> String {
+    format!("{OVERLAY_TITLE} {i}")
+}
+
+/// Lift each capture overlay above the menu bar and Dock, place it exactly
+/// over its monitor (macOS otherwise keeps windows clear of the menu bar and
+/// notch), and make it appear on the current Space even over full-screen apps.
+///
+/// `monitors[i]` is the bounds of overlay `i` in global top-left coordinates.
+pub fn raise_overlays(monitors: &[rustshot_core::Region]) {
     #[cfg(target_os = "macos")]
     {
-        use objc2_app_kit::{NSApplication, NSWindowCollectionBehavior};
-        use objc2_foundation::MainThreadMarker;
+        use objc2_app_kit::{NSApplication, NSScreen, NSWindowCollectionBehavior};
+        use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize};
 
         let Some(mtm) = MainThreadMarker::new() else { return };
+        // Cocoa puts the origin at the bottom-left of the primary screen.
+        let Some(primary) = NSScreen::screens(mtm).firstObject() else { return };
+        let primary_h = primary.frame().size.height;
         let app = NSApplication::sharedApplication(mtm);
         for window in app.windows().iter() {
-            if window.title().to_string() == OVERLAY_TITLE {
-                // NSScreenSaverWindowLevel
-                window.setLevel(1000);
-                window.setCollectionBehavior(
-                    NSWindowCollectionBehavior::CanJoinAllSpaces
-                        | NSWindowCollectionBehavior::FullScreenAuxiliary
-                        | NSWindowCollectionBehavior::Stationary,
-                );
+            let title = window.title().to_string();
+            let Some(i) = title.strip_prefix(OVERLAY_TITLE).and_then(|n| n.trim().parse::<usize>().ok()) else {
+                continue;
+            };
+            let Some(m) = monitors.get(i) else { continue };
+            // NSScreenSaverWindowLevel
+            window.setLevel(1000);
+            window.setCollectionBehavior(
+                NSWindowCollectionBehavior::CanJoinAllSpaces
+                    | NSWindowCollectionBehavior::FullScreenAuxiliary
+                    | NSWindowCollectionBehavior::Stationary,
+            );
+            let target = NSRect::new(NSPoint::new(m.x, primary_h - m.y - m.h), NSSize::new(m.w, m.h));
+            let current = window.frame();
+            if current.origin != target.origin || current.size != target.size {
+                log::debug!("moving overlay {i} from {current:?} to {target:?}");
+                window.setFrame_display(target, true);
             }
         }
     }
+    #[cfg(not(target_os = "macos"))]
+    let _ = monitors;
 }
 
 /// Bring the app to the foreground so its windows get keyboard focus.

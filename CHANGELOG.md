@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-13
+
+First release.
+
 ### Added
 
 - Menu-bar / tray app with capture menu, open from clipboard or file, open output folder, preferences and about.
@@ -21,4 +25,5 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - App icon, `cargo xtask icons` to regenerate it, and macOS bundle metadata.
 - CI on macOS, Windows and Linux, and a tag-driven release workflow.
 
-[Unreleased]: https://github.com/moridin1138/rustshot/commits/main
+[Unreleased]: https://github.com/moridin1138/rustshot/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/moridin1138/rustshot/releases/tag/v0.1.0
