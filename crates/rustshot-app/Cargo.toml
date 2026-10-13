@@ -1,0 +1,36 @@
+[package]
+name = "rustshot-app"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow = "1.0.104"
+chrono = "0.4.45"
+eframe = "0.36.2"
+egui = "0.36.2"
+env_logger = "0.11.11"
+global-hotkey = "0.8.0"
+log = "0.4.34"
+rfd = "0.17.2"
+rustshot-core = { version = "0.1.0", path = "../rustshot-core" }
+rustshot-editor = { version = "0.1.0", path = "../rustshot-editor" }
+tray-icon = "0.26.1"
+winit = "0.30"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSWindow", "NSResponder", "NSRunningApplication"] }
+objc2-foundation = "0.3"
+
+[[bin]]
+name = "rustshot"
+path = "src/main.rs"
+
+# `cargo install cargo-bundle && cargo bundle --release -p rustshot-app`
+# produces Rustshot.app on macOS. LSUIElement keeps it out of the Dock.
+[package.metadata.bundle]
+name = "Rustshot"
+identifier = "org.rustshot.Rustshot"
+short_description = "Cross-platform screenshot tool inspired by Greenshot"
+osx_info_plist_exts = ["bundle/Info.plist.ext"]

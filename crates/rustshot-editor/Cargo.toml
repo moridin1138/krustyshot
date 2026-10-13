@@ -1,0 +1,12 @@
+[package]
+name = "rustshot-editor"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+ab_glyph = "0.2"
+egui = "0.36.2"
+epaint_default_fonts = "0.36.2"
+image = "0.25.10"
+tiny-skia = "0.12.0"
