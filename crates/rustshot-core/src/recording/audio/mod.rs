@@ -9,7 +9,9 @@ mod mix;
 #[cfg(target_os = "macos")]
 mod system_macos;
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
+use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::Result;
@@ -122,6 +124,39 @@ mod mic_access_macos {
     }
 }
 
+/// One sound source's state during a recording, shared with the UI.
+#[derive(Debug, Default)]
+pub struct SourceControl {
+    live: AtomicBool,
+    muted: AtomicBool,
+}
+
+impl SourceControl {
+    /// The source started and is delivering sound (or silence while muted).
+    pub fn is_live(&self) -> bool {
+        self.live.load(Ordering::Acquire)
+    }
+
+    pub fn is_muted(&self) -> bool {
+        self.muted.load(Ordering::Acquire)
+    }
+
+    pub fn set_muted(&self, muted: bool) {
+        self.muted.store(muted, Ordering::Release);
+    }
+
+    fn set_live(&self) {
+        self.live.store(true, Ordering::Release);
+    }
+}
+
+/// The sources of a recording, for showing and muting them.
+#[derive(Debug, Default)]
+pub struct SoundControls {
+    pub microphone: Arc<SourceControl>,
+    pub system: Arc<SourceControl>,
+}
+
 /// What to record.
 #[derive(Clone, Debug, Default)]
 pub struct AudioSources {
@@ -150,28 +185,37 @@ impl AudioCapture {
     /// A source that can't start is logged and skipped, so a missing
     /// microphone doesn't stop the screen recording; an error is returned
     /// only if every chosen source failed.
-    pub fn start(sources: &AudioSources, started: Instant, out: Sender<SourceChunk>) -> Result<Self> {
+    pub fn start(sources: &AudioSources, started: Instant, out: Sender<SourceChunk>, controls: &SoundControls) -> Result<Self> {
         #[cfg(any(target_os = "macos", windows))]
         {
             let mut streams = Vec::new();
             let mut errors = Vec::new();
             if let Some(device) = &sources.microphone {
-                match cpal_source::microphone(device.as_deref(), started, out.clone()) {
-                    Ok(s) => streams.push(s),
+                match cpal_source::microphone(device.as_deref(), SourceSender::new(started, out.clone(), &controls.microphone)) {
+                    Ok(s) => {
+                        controls.microphone.set_live();
+                        streams.push(s)
+                    }
                     Err(e) => errors.push(format!("microphone: {e:#}")),
                 }
             }
             #[cfg(windows)]
             if sources.system {
-                match cpal_source::loopback(started, out.clone()) {
-                    Ok(s) => streams.push(s),
+                match cpal_source::loopback(SourceSender::new(started, out.clone(), &controls.system)) {
+                    Ok(s) => {
+                        controls.system.set_live();
+                        streams.push(s)
+                    }
                     Err(e) => errors.push(format!("system sound: {e:#}")),
                 }
             }
             #[cfg(target_os = "macos")]
             let system = if sources.system {
-                match system_macos::SystemAudio::start(started, out.clone()) {
-                    Ok(s) => Some(s),
+                match system_macos::SystemAudio::start(SourceSender::new(started, out.clone(), &controls.system)) {
+                    Ok(s) => {
+                        controls.system.set_live();
+                        Some(s)
+                    }
                     Err(e) => {
                         errors.push(format!("system sound: {e:#}"));
                         None
@@ -198,7 +242,7 @@ impl AudioCapture {
         }
         #[cfg(not(any(target_os = "macos", windows)))]
         {
-            let _ = (sources, started, out);
+            let _ = (sources, started, out, controls);
             anyhow::bail!("recording sound isn't available on this platform")
         }
     }
@@ -209,11 +253,12 @@ pub(crate) struct SourceSender {
     started: Instant,
     clock: SourceClock,
     out: Sender<SourceChunk>,
+    control: Arc<SourceControl>,
 }
 
 impl SourceSender {
-    pub(crate) fn new(started: Instant, out: Sender<SourceChunk>) -> Self {
-        Self { started, clock: SourceClock::default(), out }
+    pub(crate) fn new(started: Instant, out: Sender<SourceChunk>, control: &Arc<SourceControl>) -> Self {
+        Self { started, clock: SourceClock::default(), out, control: control.clone() }
     }
 
     /// `samples` interleaved, `channels` per frame, at `rate` Hz.
@@ -222,23 +267,24 @@ impl SourceSender {
         if frames.is_empty() {
             return;
         }
+        // Keep counting while muted, so the timing stays smooth; the mixer
+        // fills the gap with silence.
         let start = self.clock.place(self.started.elapsed(), frames.len());
-        let _ = self.out.send(SourceChunk { start, frames });
+        if !self.control.is_muted() {
+            let _ = self.out.send(SourceChunk { start, frames });
+        }
     }
 }
 
 #[cfg(any(target_os = "macos", windows))]
 mod cpal_source {
-    use std::sync::mpsc::Sender;
-    use std::time::Instant;
-
     use anyhow::{Context, Result};
     use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
     use cpal::{Device, FromSample, SampleFormat, SizedSample, Stream, SupportedStreamConfig};
 
-    use super::{SourceChunk, SourceSender};
+    use super::SourceSender;
 
-    pub fn microphone(id: Option<&str>, started: Instant, out: Sender<SourceChunk>) -> Result<Stream> {
+    pub fn microphone(id: Option<&str>, sender: SourceSender) -> Result<Stream> {
         let host = cpal::default_host();
         let chosen = id.and_then(|id| id.parse().ok()).and_then(|id| host.device_by_id(&id));
         if id.is_some() && chosen.is_none() {
@@ -246,38 +292,37 @@ mod cpal_source {
         }
         let device = chosen.or_else(|| host.default_input_device()).context("no microphone found")?;
         let config = device.default_input_config().context("reading the microphone's format")?;
-        stream(&device, config, started, out)
+        stream(&device, config, sender)
     }
 
     /// Windows: what the speakers play, by recording from the output device.
     #[cfg(windows)]
-    pub fn loopback(started: Instant, out: Sender<SourceChunk>) -> Result<Stream> {
+    pub fn loopback(sender: SourceSender) -> Result<Stream> {
         let device = cpal::default_host().default_output_device().context("no speakers or headphones found")?;
         let config = device.default_output_config().context("reading the output format")?;
-        stream(&device, config, started, out)
+        stream(&device, config, sender)
     }
 
-    fn stream(device: &Device, config: SupportedStreamConfig, started: Instant, out: Sender<SourceChunk>) -> Result<Stream> {
+    fn stream(device: &Device, config: SupportedStreamConfig, sender: SourceSender) -> Result<Stream> {
         let s = match config.sample_format() {
-            SampleFormat::F32 => build::<f32>(device, &config, started, out),
-            SampleFormat::I16 => build::<i16>(device, &config, started, out),
-            SampleFormat::I32 => build::<i32>(device, &config, started, out),
-            SampleFormat::U16 => build::<u16>(device, &config, started, out),
-            SampleFormat::U8 => build::<u8>(device, &config, started, out),
+            SampleFormat::F32 => build::<f32>(device, &config, sender),
+            SampleFormat::I16 => build::<i16>(device, &config, sender),
+            SampleFormat::I32 => build::<i32>(device, &config, sender),
+            SampleFormat::U16 => build::<u16>(device, &config, sender),
+            SampleFormat::U8 => build::<u8>(device, &config, sender),
             other => anyhow::bail!("unsupported sample format {other}"),
         }?;
         s.play().context("starting the audio stream")?;
         Ok(s)
     }
 
-    fn build<T>(device: &Device, config: &SupportedStreamConfig, started: Instant, out: Sender<SourceChunk>) -> Result<Stream>
+    fn build<T>(device: &Device, config: &SupportedStreamConfig, mut sender: SourceSender) -> Result<Stream>
     where
         T: SizedSample,
         f32: FromSample<T>,
     {
         let channels = config.channels() as usize;
         let rate = config.sample_rate();
-        let mut sender = SourceSender::new(started, out);
         let mut buf: Vec<f32> = Vec::new();
         let stream = device.build_input_stream::<T, _, _>(
             config.config(),

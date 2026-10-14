@@ -98,6 +98,8 @@ pub struct Recording {
     pub started: Instant,
     pub path: PathBuf,
     reason: Arc<Mutex<Option<StopReason>>>,
+    /// The sound sources, when the recording has sound.
+    sound: Option<Arc<audio::SoundControls>>,
     capture: Option<JoinHandle<Result<()>>>,
     encode: Option<JoinHandle<Result<()>>>,
 }
@@ -322,10 +324,11 @@ impl Recording {
         // can block (on a permission prompt, or a busy device), and that must
         // never hold up the picture, Stop, or the app. A source that won't
         // start just leaves the track silent.
-        if with_audio {
+        let sound = with_audio.then(|| Arc::new(audio::SoundControls::default()));
+        if let Some(controls) = sound.clone() {
             let stop = stop.clone();
             std::thread::Builder::new().name("rustshot-audio".into()).spawn(move || {
-                let _sound = audio::AudioCapture::start(&sources, started, audio_tx)
+                let _sound = audio::AudioCapture::start(&sources, started, audio_tx, &controls)
                     .inspect_err(|e| log::warn!("recording without sound: {e:#}"))
                     .ok();
                 while !stop.load(Ordering::Acquire) {
@@ -334,7 +337,22 @@ impl Recording {
             })?;
         }
 
-        Ok(Self { stop, cancel, stats, started, path: path.to_path_buf(), reason, capture: Some(capture), encode: Some(encode) })
+        Ok(Self {
+            stop,
+            cancel,
+            stats,
+            started,
+            path: path.to_path_buf(),
+            reason,
+            sound,
+            capture: Some(capture),
+            encode: Some(encode),
+        })
+    }
+
+    /// The sound sources, for showing and muting them, if this recording has sound.
+    pub fn sound(&self) -> Option<&audio::SoundControls> {
+        self.sound.as_deref()
     }
 
     /// True once the recording has stopped by itself (e.g. disk full).

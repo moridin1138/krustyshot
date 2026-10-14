@@ -8,9 +8,9 @@
 
 use std::ffi::{c_char, c_int, c_void};
 use std::ptr::{null_mut, NonNull};
-use std::sync::mpsc::{channel, Sender};
+use std::sync::mpsc::channel;
 use std::sync::{Mutex, OnceLock};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use anyhow::{anyhow, bail, Context, Result};
 use block2::RcBlock;
@@ -22,7 +22,7 @@ use objc2_core_foundation::CFRetained;
 use objc2_core_media::{CMAudioFormatDescriptionGetStreamBasicDescription, CMBlockBuffer, CMSampleBuffer, CMTime};
 use objc2_foundation::{NSError, NSOperatingSystemVersion, NSProcessInfo};
 
-use super::{SourceChunk, SourceSender};
+use super::SourceSender;
 
 const FRAMEWORK: &std::ffi::CStr = c"/System/Library/Frameworks/ScreenCaptureKit.framework/ScreenCaptureKit";
 /// `SCStreamOutputType`.
@@ -166,7 +166,7 @@ pub struct SystemAudio {
 }
 
 impl SystemAudio {
-    pub fn start(started: Instant, out: Sender<SourceChunk>) -> Result<Self> {
+    pub fn start(sender: SourceSender) -> Result<Self> {
         if !supported() {
             bail!("needs macOS 13 or later");
         }
@@ -206,7 +206,7 @@ impl SystemAudio {
             let stream: Retained<AnyObject> =
                 msg_send![stream, initWithFilter: &*filter, configuration: &*config, delegate: nil];
 
-            let output = Output::new(SourceSender::new(started, out));
+            let output = Output::new(sender);
             let queue: *mut AnyObject = null_mut();
             for kind in [OUTPUT_SCREEN, OUTPUT_AUDIO] {
                 let mut error: *mut NSError = null_mut();

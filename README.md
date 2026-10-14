@@ -38,7 +38,7 @@ Change them in Settings (click a shortcut and press the new keys). macOS keeps �
 
 ## Recording
 
-Choose **Record region…**, **Record window…** or **Record full screen** from the menu-bar icon, or press the recording shortcut (⌥⇧V on macOS) and drag a region. A small bar shows the time and file size, with **Stop** and **Discard** (which asks before deleting). Press the shortcut again, or choose **Stop recording** from the menu, to finish. The file is saved to your output folder, and a notification lets you show it.
+Choose **Record region…**, **Record window…** or **Record full screen** from the menu-bar icon, or press the recording shortcut (⌥⇧V on macOS) and drag a region. A small bar shows the time and file size, with **Stop** and **Discard** (which asks before deleting). When the recording has sound, microphone and speaker icons blink next to the timer; click one to mute or unmute it. Press the shortcut again, or choose **Stop recording** from the menu, to finish. The file is saved to your output folder, and a notification lets you show it.
 
 Settings → Recording chooses MP4 or GIF, the quality, full or half resolution on Retina displays, and the frame rate, and estimates how much space a minute takes. For MP4s you can also record the **microphone** (pick which one) and **system sound** (macOS 13 or later, and Windows), and turn on **Show mouse clicks**. GIFs have no sound. MP4 recording works on macOS and Windows; Linux records GIFs for now. Recordings use one display at a time.
 
