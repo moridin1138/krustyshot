@@ -4,12 +4,13 @@ Rustshot is a Cargo workspace with three crates plus a maintenance tool. Each cr
 
 | Crate | Kind | Responsibility |
 |---|---|---|
+| `crates/rustshot-i18n` | library | Interface translations (Fluent files in `locales/`) and the `tr!` macro |
 | `crates/rustshot-core` | library, no UI | Screen capture, geometry, settings, filename patterns, saving and clipboard |
 | `crates/rustshot-editor` | library, egui | The annotation editor: document model, undo history, rendering and export |
 | `crates/rustshot-app` | binary `rustshot` | Tray icon, hotkeys, capture overlay, windows, and wiring everything together |
 | `xtask` | binary, dev only | `cargo xtask icons` regenerates the app icon |
 
-`rustshot-editor` does not depend on `rustshot-core`. It receives an image and hands back requests (save, copy, close) for the app to carry out, so it could be reused elsewhere.
+Every crate uses `rustshot-i18n` for user-facing text (see [TRANSLATING.md](TRANSLATING.md)). `rustshot-editor` does not depend on `rustshot-core`. It receives an image and hands back requests (save, copy, close) for the app to carry out, so it could be reused elsewhere.
 
 ## Key libraries
 
@@ -48,7 +49,7 @@ Tray menu clicks and hotkey presses arrive on callbacks. These push an `AppEvent
 | `overlay.rs` | One borderless overlay per monitor during a capture |
 | `app.rs` (`show_picker`) | The "what next?" destination picker |
 | `app.rs` (`show_editors`) | One editor window per open image |
-| `settings_ui.rs` | Preferences |
+| `settings_ui.rs` | Settings: sidebar sections, instant apply, shortcut recorder |
 | `app.rs` (`show_notices`) | Small message windows (errors, permissions, about) |
 
 ## How a capture flows
@@ -105,6 +106,7 @@ Unit tests sit next to the code and cover the parts that don't need a display: g
 Debug builds have two developer switches (environment variables, ignored in release builds):
 
 - `RUSTSHOT_IGNORE_PERMISSION=1` skips the Screen Recording check, so the overlay can be exercised under a debugger, which never has the permission.
+- `RUSTSHOT_SETTINGS_TOUR=<folder>` (macOS) opens Settings, visits each section and saves a picture of just that window to the folder, for reviewing the design. Combine with the `--settings` flag.
 - `RUSTSHOT_STRESS=1` opens and closes editor windows (with a focused text box) and message windows in a loop, to hunt window-lifecycle bugs without touching files or the clipboard.
 
 CI (`.github/workflows/ci.yml`) runs clippy with warnings as errors, plus the tests, on macOS, Windows and Linux.

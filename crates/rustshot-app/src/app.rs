@@ -11,9 +11,11 @@ use rustshot_editor::{Editor, EditorRequest};
 use tray_icon::menu::MenuEvent;
 use tray_icon::{MouseButton, MouseButtonState, TrayIconEvent};
 
+use crate::fonts;
+use rustshot_i18n::tr;
 use crate::hotkeys::HotkeyRegistry;
 use crate::overlay::{Outcome, Overlay};
-use crate::settings_ui::{SettingsAction, SettingsWindow};
+use crate::settings_ui::SettingsWindow;
 use crate::tray::{self, Tray};
 use crate::platform;
 
@@ -26,12 +28,12 @@ pub enum CaptureMode {
 }
 
 impl CaptureMode {
-    pub fn label(self) -> &'static str {
+    pub fn label(self) -> String {
         match self {
-            CaptureMode::Region => "Capture region",
-            CaptureMode::Window => "Capture window",
-            CaptureMode::Fullscreen => "Capture full screen",
-            CaptureMode::LastRegion => "Capture last region",
+            CaptureMode::Region => tr!("capture-region"),
+            CaptureMode::Window => tr!("capture-window"),
+            CaptureMode::Fullscreen => tr!("capture-fullscreen"),
+            CaptureMode::LastRegion => tr!("capture-last-region"),
         }
     }
 }
@@ -95,6 +97,7 @@ pub struct App {
     /// Debug builds only: next step of the RUSTSHOT_STRESS window test.
     stress: Option<(Instant, u64)>,
     toast: Option<Toast>,
+    hotkeys_paused: bool,
 }
 
 impl App {
@@ -102,7 +105,7 @@ impl App {
         let ctx = cc.egui_ctx.clone();
         // Cmd +/- are used for canvas zoom in the editor.
         ctx.options_mut(|o| o.zoom_with_keyboard = false);
-        rustshot_editor::install_fonts(&ctx);
+        fonts::install(&ctx);
         platform::hide_background_window();
 
         let (tx, rx) = channel();
@@ -133,6 +136,7 @@ impl App {
         }
 
         let config = Config::load();
+        rustshot_i18n::set_language(config.language.as_deref());
         let tray = Tray::new(&config).map_err(|e| log::error!("tray icon: {e}")).ok();
         let mut hotkeys = HotkeyRegistry::new();
         let hotkey_errors = hotkeys.register(&config.hotkeys);
@@ -158,6 +162,7 @@ impl App {
             stress: (cfg!(debug_assertions) && std::env::var_os("RUSTSHOT_STRESS").is_some())
                 .then(|| (Instant::now() + Duration::from_secs(2), 0)),
             toast: None,
+            hotkeys_paused: false,
         };
 
         // Let macOS show its own permission prompt once (this also adds Rustshot
@@ -168,11 +173,12 @@ impl App {
             permissions::request_screen_capture_access();
         }
         if !app.hotkey_errors.is_empty() {
-            let body = format!(
-                "Some hotkeys could not be registered (another app may be using them):\n\n{}\n\nChange them in Preferences.",
-                app.hotkey_errors.join("\n")
-            );
-            app.notice("Hotkeys", &body, false);
+            let body = tr!("notice-hotkeys-body", errors = app.hotkey_errors.join("\n"));
+            app.notice(&tr!("notice-hotkeys-title"), &body, false);
+        }
+        // `rustshot --settings` opens the Settings window straight away.
+        if std::env::args().any(|a| a == "--settings") {
+            app.settings = Some(SettingsWindow::new());
         }
         log::info!("Rustshot running; config at {:?}", Config::path());
         app
@@ -217,7 +223,7 @@ impl App {
 
     fn notify_saved(&mut self, path: PathBuf) {
         let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-        self.notify(&format!("Saved {name}"), Some(path));
+        self.notify(&tr!("toast-saved", name = name), Some(path));
     }
 
     /// Show a brief toast, if notifications are on.
@@ -266,7 +272,7 @@ impl App {
                         ui.vertical(|ui| {
                             ui.label(egui::RichText::new(&toast.message).strong());
                             if toast.path.is_some() {
-                                ui.weak(if cfg!(target_os = "macos") { "Click to show in Finder" } else { "Click to show the file" });
+                                ui.weak(if cfg!(target_os = "macos") { tr!("toast-show-finder") } else { tr!("toast-show-file") });
                             }
                         });
                     });
@@ -291,18 +297,7 @@ impl App {
         if self.notices.iter().any(|n| n.permission) {
             return;
         }
-        self.notice(
-            "Screen Recording permission needed",
-            "Rustshot needs Screen Recording permission to capture other apps. Without it, \
-             macOS only lets it capture the desktop background.\n\n\
-             1. Click Open System Settings.\n\
-             2. Under Privacy & Security > Screen Recording, turn on Rustshot.\n\
-             3. Click Quit Rustshot, then open Rustshot again.\n\n\
-             Is Rustshot already turned on but captures still show no windows? Each new version \
-             needs the permission again. Click Reset permission and answer the macOS prompt.\n\n\
-             Running Rustshot from a terminal? Give the permission to your terminal app instead.",
-            true,
-        );
+        self.notice(&tr!("permission-title"), &tr!("permission-body"), true);
     }
 
     fn handle_events(&mut self, ctx: &egui::Context) {
@@ -346,12 +341,12 @@ impl App {
             tray::CAPTURE_FULLSCREEN => self.request_capture(CaptureMode::Fullscreen, true, ctx),
             tray::CAPTURE_LAST_REGION => self.request_capture(CaptureMode::LastRegion, true, ctx),
             tray::OPEN_CLIPBOARD => match output::image_from_clipboard() {
-                Some(img) => self.open_editor(img, "Clipboard", Local::now()),
-                None => self.notice("Clipboard", "There is no image on the clipboard.", false),
+                Some(img) => self.open_editor(img, &tr!("title-clipboard"), Local::now()),
+                None => self.notice(&tr!("title-clipboard"), &tr!("notice-no-clipboard-image"), false),
             },
             tray::OPEN_FILE => {
                 let file = rfd::FileDialog::new()
-                    .add_filter("Images", &["png", "jpg", "jpeg", "bmp", "gif", "webp", "tif", "tiff"])
+                    .add_filter(tr!("filter-images"), &["png", "jpg", "jpeg", "bmp", "gif", "webp", "tif", "tiff"])
                     .pick_file();
                 if let Some(path) = file {
                     match output::load_image(&path) {
@@ -362,7 +357,7 @@ impl App {
                                 ew.path = Some(path);
                             }
                         }
-                        Err(e) => self.notice("Open image", &format!("{e:#}"), false),
+                        Err(e) => self.notice(&tr!("notice-open-image"), &format!("{e:#}"), false),
                     }
                 }
             }
@@ -372,20 +367,11 @@ impl App {
             }
             tray::PREFERENCES => {
                 if self.settings.is_none() {
-                    self.settings = Some(SettingsWindow::new(&self.config));
+                    self.settings = Some(SettingsWindow::new());
                 }
                 platform::activate_app();
             }
-            tray::ABOUT => self.notice(
-                "About Rustshot",
-                concat!(
-                    "Rustshot ",
-                    env!("CARGO_PKG_VERSION"),
-                    "\n\nA cross-platform screenshot tool inspired by Greenshot, written in Rust with egui.\n\n",
-                    "Licensed under the PolyForm Shield License 1.0.0: free for any use, including commercial,\nexcept providing a product that competes with Rustshot."
-                ),
-                false,
-            ),
+            tray::ABOUT => self.notice(&tr!("menu-about"), &tr!("about-body", version = env!("CARGO_PKG_VERSION")), false),
             tray::QUIT => self.quit = true,
             _ => {}
         }
@@ -434,7 +420,7 @@ impl App {
             }),
             CaptureMode::Fullscreen => capture::take_snapshot(self.snapshot_options(false)).map(|snap| {
                 if let Some(image) = snap.stitch_all() {
-                    self.deliver(Capture { image, title: "Full screen".into(), taken_at: snap.taken_at });
+                    self.deliver(Capture { image, title: tr!("title-full-screen"), taken_at: snap.taken_at });
                 }
             }),
             CaptureMode::LastRegion => match self.config.last_region {
@@ -451,7 +437,7 @@ impl App {
         };
         if let Err(e) = result {
             log::error!("capture failed: {e:#}");
-            self.notice("Capture failed", &format!("{e:#}"), false);
+            self.notice(&tr!("notice-capture-failed"), &format!("{e:#}"), false);
         }
         ctx.request_repaint();
     }
@@ -479,7 +465,7 @@ impl App {
                 Ok(())
             }
             Destination::Clipboard => {
-                output::copy_image_to_clipboard(&cap.image).map(|_| self.notify("Copied to clipboard", None))
+                output::copy_image_to_clipboard(&cap.image).map(|_| self.notify(&tr!("toast-copied"), None))
             }
             Destination::File => {
                 let path = output::auto_path(&self.config, &cap.title, cap.taken_at);
@@ -492,13 +478,13 @@ impl App {
         };
         if let Err(e) = result {
             log::error!("{}: {e:#}", dest.label());
-            self.notice(dest.label(), &format!("{e:#}"), false);
+            self.notice(&dest.label(), &format!("{e:#}"), false);
         }
     }
 
     fn open_editor(&mut self, image: RgbaImage, title: &str, taken_at: DateTime<Local>) {
         self.next_id += 1;
-        let title = if title.trim().is_empty() { "Screenshot".to_string() } else { title.to_string() };
+        let title = if title.trim().is_empty() { tr!("title-screenshot") } else { title.to_string() };
         self.editors.push(EditorWindow {
             id: egui::ViewportId::from_hash_of(("rustshot-editor", self.next_id)),
             editor: Editor::new(image, title),
@@ -537,25 +523,25 @@ impl App {
                 return Some(None);
             }
             egui::CentralPanel::default().show(ui, |ui| {
-                ui.label(egui::RichText::new(format!("Screenshot {w} × {h}")).strong());
+                ui.label(egui::RichText::new(tr!("picker-heading", width = w, height = h)).strong());
                 ui.add_space(6.0);
                 let full = |ui: &mut egui::Ui, text: &str| {
                     ui.add_sized([ui.available_width(), 28.0], egui::Button::new(text)).clicked()
                 };
-                if full(ui, "Open in image editor") {
+                if full(ui, &tr!("dest-editor")) {
                     choice = Some(Some(Destination::Editor));
                 }
-                if full(ui, "Copy to clipboard") {
+                if full(ui, &tr!("dest-clipboard")) {
                     choice = Some(Some(Destination::Clipboard));
                 }
-                if full(ui, "Save directly") {
+                if full(ui, &tr!("dest-file")) {
                     choice = Some(Some(Destination::File));
                 }
-                if full(ui, "Save as…") {
+                if full(ui, &tr!("dest-file-as")) {
                     choice = Some(Some(Destination::FileAs));
                 }
                 ui.add_space(4.0);
-                if full(ui, "Cancel") {
+                if full(ui, &tr!("button-cancel")) {
                     choice = Some(None);
                 }
             });
@@ -607,13 +593,14 @@ impl App {
                     EditorRequest::Save | EditorRequest::SaveAs => {
                         save_editor(config, ew, req == EditorRequest::SaveAs).map(|saved| {
                             if let Some(path) = saved {
-                                toasts.push(("Saved".into(), Some(path)));
+                                let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                                toasts.push((tr!("toast-saved", name = name), Some(path)));
                             }
                         })
                     }
                     EditorRequest::Copy => output::copy_image_to_clipboard(&ew.editor.flatten()).map(|_| {
-                        ew.editor.set_status("Copied to clipboard");
-                        toasts.push(("Copied to clipboard".into(), None));
+                        ew.editor.set_status(tr!("toast-copied"));
+                        toasts.push((tr!("toast-copied"), None));
                     }),
                     EditorRequest::Close => {
                         close = true;
@@ -621,7 +608,7 @@ impl App {
                     }
                 };
                 if let Err(e) = result {
-                    ew.editor.set_status(format!("Error: {e:#}"));
+                    ew.editor.set_status(tr!("status-error", error = format!("{e:#}")));
                     errors.push(format!("{e:#}"));
                 }
             }
@@ -646,22 +633,42 @@ impl App {
 
     fn show_settings(&mut self, ctx: &egui::Context) {
         let Some(settings) = &mut self.settings else { return };
-        match settings.show(ctx, &self.hotkey_errors) {
-            Some(SettingsAction::Save(cfg)) => {
-                self.config = *cfg;
-                if let Err(e) = self.config.save() {
-                    self.notice("Preferences", &format!("Could not save preferences: {e:#}"), false);
-                }
+        let out = settings.show(ctx, &self.config, &self.hotkey_errors);
+        if let Some(new) = out.config {
+            let hotkeys_changed = new.hotkeys != self.config.hotkeys;
+            let language_changed = new.language != self.config.language;
+            if language_changed {
+                rustshot_i18n::set_language(new.language.as_deref());
+            }
+            let tray_changed = hotkeys_changed || language_changed || new.tray_click != self.config.tray_click;
+            self.config = new;
+            if let Err(e) = self.config.save() {
+                log::error!("saving settings: {e:#}");
+            }
+            if hotkeys_changed && !out.recording {
                 self.hotkey_errors = self.hotkeys.register(&self.config.hotkeys);
-                // Rebuild the tray so menu shortcuts match the new hotkeys.
+            }
+            if tray_changed {
+                // Rebuild the tray so menu shortcuts and click behaviour match.
                 self.tray = None;
                 self.tray = Tray::new(&self.config).map_err(|e| log::error!("tray icon: {e}")).ok();
-                if self.hotkey_errors.is_empty() {
-                    self.settings = None;
-                }
             }
-            Some(SettingsAction::Cancel) => self.settings = None,
-            None => {}
+        }
+        // Pause global hotkeys while a new shortcut is being recorded, so
+        // pressing the old one doesn't start a capture.
+        if out.recording && !self.hotkeys_paused {
+            self.hotkeys.suspend();
+            self.hotkeys_paused = true;
+        } else if !out.recording && self.hotkeys_paused {
+            self.hotkey_errors = self.hotkeys.register(&self.config.hotkeys);
+            self.hotkeys_paused = false;
+        }
+        if out.close {
+            self.settings = None;
+            if self.hotkeys_paused {
+                self.hotkey_errors = self.hotkeys.register(&self.config.hotkeys);
+                self.hotkeys_paused = false;
+            }
         }
     }
 
@@ -683,23 +690,23 @@ impl App {
                     ui.add_space(10.0);
                     ui.horizontal_wrapped(|ui| {
                         if n.permission {
-                            if ui.button("Open System Settings").clicked() {
+                            if ui.button(tr!("permission-open-settings")).clicked() {
                                 permissions::open_privacy_settings();
                             }
                             if ui
-                                .button("Reset permission")
-                                .on_hover_text("Remove Rustshot's old Screen Recording entry and ask again")
+                                .button(tr!("permission-reset"))
+                                .on_hover_text(tr!("permission-reset-tip"))
                                 .clicked()
                             {
                                 // macOS shows its own prompt next; get out of its way.
                                 permissions::reset_screen_capture_access();
                                 close = true;
                             }
-                            if ui.button("Quit Rustshot").clicked() {
+                            if ui.button(tr!("menu-quit")).clicked() {
                                 quit = true;
                             }
                         }
-                        if ui.button(if n.permission { "Close" } else { "OK" }).clicked() {
+                        if ui.button(if n.permission { tr!("button-close") } else { tr!("button-ok") }).clicked() {
                             close = true;
                         }
                     });
@@ -764,7 +771,7 @@ fn save_editor(config: &Config, ew: &mut EditorWindow, ask: bool) -> anyhow::Res
     };
     let path = save_and_report(config, &ew.editor.flatten(), &path)?;
     ew.editor.mark_saved();
-    ew.editor.set_status(format!("Saved to {}", path.display()));
+    ew.editor.set_status(tr!("status-saved-to", path = path.display().to_string()));
     ew.path = Some(path.clone());
     Ok(Some(path))
 }
@@ -776,14 +783,14 @@ fn confirm_close(config: &Config, ew: &mut EditorWindow) -> bool {
     }
     let answer = rfd::MessageDialog::new()
         .set_title("Rustshot")
-        .set_description("Save changes to this screenshot before closing?")
+        .set_description(tr!("confirm-save-changes"))
         .set_buttons(rfd::MessageButtons::YesNoCancel)
         .show();
     match answer {
         rfd::MessageDialogResult::Yes => match save_editor(config, ew, false) {
             Ok(_) => true,
             Err(e) => {
-                ew.editor.set_status(format!("Error: {e:#}"));
+                ew.editor.set_status(tr!("status-error", error = format!("{e:#}")));
                 false
             }
         },

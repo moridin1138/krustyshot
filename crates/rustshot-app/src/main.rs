@@ -4,6 +4,7 @@
 //! Rustshot: a cross-platform screenshot tool modelled on Greenshot.
 
 mod app;
+mod fonts;
 mod hotkeys;
 mod overlay;
 mod platform;

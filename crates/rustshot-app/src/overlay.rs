@@ -5,6 +5,7 @@
 
 use egui::{Align2, Color32, FontId, Key, Pos2, Rect, Stroke, StrokeKind, TextureHandle, TextureOptions, Vec2};
 use rustshot_core::{RgbaImage, Region, Snapshot};
+use rustshot_i18n::tr;
 
 use crate::platform;
 
@@ -240,11 +241,11 @@ impl Overlay {
         let show_help = cursor_here.is_some() || (self.cursor.is_none() && is_primary);
         if show_help {
             let text = if self.window_mode {
-                "Click a window to capture it  ·  Space: region mode  ·  Esc: cancel"
+                tr!("overlay-help-window")
             } else {
-                "Drag to select a region  ·  Click a window to capture it  ·  Space: window mode  ·  Esc: cancel"
+                tr!("overlay-help-region")
             };
-            pill(painter, Pos2::new(screen.center().x, screen.min.y + 40.0), Align2::CENTER_TOP, text);
+            pill(painter, Pos2::new(screen.center().x, screen.min.y + 40.0), Align2::CENTER_TOP, &text);
         }
     }
 }

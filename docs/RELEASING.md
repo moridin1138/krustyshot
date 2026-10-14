@@ -36,9 +36,9 @@ Every pull request or change that users would notice adds a line under `## [Unre
    - A region on a Retina display produces the expected pixel size.
    - Each destination works: editor, clipboard, save directly, save as.
    - Every editor tool, undo and redo, crop, save, and copy (paste into Preview to check).
-   - Preferences: change a hotkey, save, and confirm the new hotkey works.
+   - Settings: record a new shortcut and confirm it works straight away; toggle Open at login; Check for updates.
    - Open Mission Control on the desktop where Rustshot started: windows must look normal size, and no Rustshot window should appear.
-   - Open and close the editor, Preferences and notice windows several times, and cancel captures with Esc. Rustshot must not quit, and `~/Library/Logs/DiagnosticReports/` must have no new `rustshot-*.ips` file.
+   - Open and close the editor, Settings and notice windows several times, and cancel captures with Esc. Rustshot must not quit, and `~/Library/Logs/DiagnosticReports/` must have no new `rustshot-*.ips` file.
 3. **Choose the version** using the rules above.
 4. **Update the version** in the root `Cargo.toml`, then run `cargo build` so `Cargo.lock` picks it up.
 5. **Update CHANGELOG.md:**

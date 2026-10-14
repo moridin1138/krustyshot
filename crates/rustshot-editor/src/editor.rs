@@ -7,6 +7,7 @@ use egui::{
 use image::RgbaImage;
 
 use crate::effects::Effect;
+use rustshot_i18n::tr;
 use crate::document::{Document, Element, Handle, HighlightMode, History, Kind, ObfuscateMode, Style, SPEECH_PADDING};
 use crate::export::{self, arrow_head, contrasting_text, measure_text, speech_radius, speech_tail_base, TEXT_PADDING};
 use crate::raster;
@@ -68,20 +69,20 @@ impl Tool {
         })
     }
 
-    fn label(self) -> &'static str {
+    fn label(self) -> String {
         match self {
-            Tool::Select => "Select",
-            Tool::Rect => "Rectangle",
-            Tool::Ellipse => "Ellipse",
-            Tool::Line => "Line",
-            Tool::Arrow => "Arrow",
-            Tool::Freehand => "Freehand",
-            Tool::Text => "Text",
-            Tool::Speech => "Speech bubble",
-            Tool::Counter => "Step counter",
-            Tool::Highlight => "Highlight",
-            Tool::Obfuscate => "Obfuscate",
-            Tool::Crop => "Crop",
+            Tool::Select => tr!("tool-select"),
+            Tool::Rect => tr!("tool-rect"),
+            Tool::Ellipse => tr!("tool-ellipse"),
+            Tool::Line => tr!("tool-line"),
+            Tool::Arrow => tr!("tool-arrow"),
+            Tool::Freehand => tr!("tool-freehand"),
+            Tool::Text => tr!("tool-text"),
+            Tool::Speech => tr!("tool-speech"),
+            Tool::Counter => tr!("tool-counter"),
+            Tool::Highlight => tr!("tool-highlight"),
+            Tool::Obfuscate => tr!("tool-obfuscate"),
+            Tool::Crop => tr!("tool-crop"),
         }
     }
 
@@ -316,16 +317,16 @@ impl Editor {
     }
 
     fn effects_menu(&mut self, ui: &mut Ui) {
-        if ui.button("Drop shadow").clicked() {
+        if ui.button(tr!("effect-drop-shadow")).clicked() {
             self.apply_effect(Effect::DropShadow { offset: 6, blur: 5.0 });
             ui.close();
         }
-        if ui.button("Torn edges").clicked() {
+        if ui.button(tr!("effect-torn-edges")).clicked() {
             self.apply_effect(Effect::TornEdges { tooth: 10 });
             ui.close();
         }
         ui.horizontal(|ui| {
-            if ui.button("Border").clicked() {
+            if ui.button(tr!("effect-border")).clicked() {
                 self.apply_effect(Effect::Border { width: self.border_width, color: self.border_color });
                 ui.close();
             }
@@ -333,25 +334,25 @@ impl Editor {
             egui::color_picker::color_edit_button_srgba(ui, &mut self.border_color, egui::color_picker::Alpha::Opaque);
         });
         ui.separator();
-        if ui.button("Greyscale").clicked() {
+        if ui.button(tr!("effect-greyscale")).clicked() {
             self.apply_effect(Effect::Grayscale);
             ui.close();
         }
-        if ui.button("Invert colours").clicked() {
+        if ui.button(tr!("effect-invert")).clicked() {
             self.apply_effect(Effect::Invert);
             ui.close();
         }
         ui.separator();
-        if ui.button("Rotate left").clicked() {
+        if ui.button(tr!("effect-rotate-left")).clicked() {
             self.apply_effect(Effect::RotateCounterClockwise);
             ui.close();
         }
-        if ui.button("Rotate right").clicked() {
+        if ui.button(tr!("effect-rotate-right")).clicked() {
             self.apply_effect(Effect::RotateClockwise);
             ui.close();
         }
         ui.horizontal(|ui| {
-            if ui.button("Resize").clicked() {
+            if ui.button(tr!("effect-resize")).clicked() {
                 self.apply_effect(Effect::Resize { scale: self.resize_percent / 100.0 });
                 ui.close();
             }
@@ -475,28 +476,28 @@ impl Editor {
         use egui_phosphor::regular as icon;
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing.x = 4.0;
-            if icon_button(ui, icon::FLOPPY_DISK, true, &format!("Save to the output folder ({})", keys("Mod+S"))).clicked() {
+            if icon_button(ui, icon::FLOPPY_DISK, true, &tr!("editor-save-tip", keys = keys("Mod+S"))).clicked() {
                 requests.push(EditorRequest::Save);
             }
-            if icon_button(ui, icon::FLOPPY_DISK_BACK, true, &format!("Save as… ({})", keys("Mod+Shift+S"))).clicked() {
+            if icon_button(ui, icon::FLOPPY_DISK_BACK, true, &tr!("editor-save-as-tip", keys = keys("Mod+Shift+S"))).clicked() {
                 requests.push(EditorRequest::SaveAs);
             }
-            if icon_button(ui, icon::COPY, true, &format!("Copy image to clipboard ({})", keys("Mod+C"))).clicked() {
+            if icon_button(ui, icon::COPY, true, &tr!("editor-copy-tip", keys = keys("Mod+C"))).clicked() {
                 requests.push(EditorRequest::Copy);
             }
             ui.separator();
-            if icon_button(ui, icon::ARROW_COUNTER_CLOCKWISE, self.history.can_undo(), &format!("Undo ({})", keys("Mod+Z"))).clicked() {
+            if icon_button(ui, icon::ARROW_COUNTER_CLOCKWISE, self.history.can_undo(), &tr!("editor-undo-tip", keys = keys("Mod+Z"))).clicked() {
                 self.undo();
             }
-            if icon_button(ui, icon::ARROW_CLOCKWISE, self.history.can_redo(), &format!("Redo ({})", keys("Mod+Shift+Z"))).clicked() {
+            if icon_button(ui, icon::ARROW_CLOCKWISE, self.history.can_redo(), &tr!("editor-redo-tip", keys = keys("Mod+Shift+Z"))).clicked() {
                 self.redo();
             }
-            if icon_button(ui, icon::TRASH, self.selected.is_some(), "Delete selected (Delete)").clicked() {
+            if icon_button(ui, icon::TRASH, self.selected.is_some(), &tr!("editor-delete-tip")).clicked() {
                 self.delete_selected();
             }
             ui.menu_button(egui::RichText::new(icon::MAGIC_WAND).size(ICON_SIZE), |ui| self.effects_menu(ui))
                 .response
-                .on_hover_text("Effects: shadow, torn edges, border, greyscale, rotate, resize");
+                .on_hover_text(tr!("editor-effects-tip"));
             ui.separator();
             for tool in Tool::ALL {
                 let key = if tool == Tool::Select { "Esc".to_string() } else { format!("{:?}", tool.key()) };
@@ -508,10 +509,10 @@ impl Editor {
             }
             if self.crop_rect.is_some() {
                 ui.separator();
-                if ui.button(format!("{} Apply crop", icon::CHECK)).on_hover_text("Enter").clicked() {
+                if ui.button(format!("{} {}", icon::CHECK, tr!("editor-apply-crop"))).on_hover_text("Enter").clicked() {
                     self.apply_crop();
                 }
-                if ui.button(format!("{} Cancel", icon::X)).on_hover_text("Esc").clicked() {
+                if ui.button(format!("{} {}", icon::X, tr!("button-cancel"))).on_hover_text("Esc").clicked() {
                     self.crop_rect = None;
                 }
             }
@@ -532,60 +533,60 @@ impl Editor {
         ui.horizontal_wrapped(|ui| {
             let Some(kind) = kind else {
                 ui.label(match self.tool {
-                    Tool::Crop => "Drag to choose the area to keep, then press Enter.",
-                    _ => "Click an annotation to select it; drag to move, drag corners to resize.",
+                    Tool::Crop => tr!("editor-crop-help"),
+                    _ => tr!("editor-select-help"),
                 });
                 return;
             };
             match kind {
                 Kind::Highlight => {
-                    ui.label("Style");
+                    ui.label(tr!("prop-style"));
                     for mode in HighlightMode::ALL {
                         ui.selectable_value(&mut self.style.highlight_mode, mode, mode.label());
                     }
                     if self.style.highlight_mode == HighlightMode::Text {
-                        ui.label("Colour");
+                        ui.label(tr!("prop-colour"));
                         egui::color_picker::color_edit_button_srgba(ui, &mut self.style.highlight, egui::color_picker::Alpha::Opaque);
                     }
                 }
                 Kind::Counter => {
-                    ui.label("Colour");
+                    ui.label(tr!("prop-colour"));
                     egui::color_picker::color_edit_button_srgba(ui, &mut self.style.stroke, egui::color_picker::Alpha::Opaque);
-                    ui.label("Size");
+                    ui.label(tr!("prop-size"));
                     ui.add(egui::DragValue::new(&mut self.style.font_size).range(8.0..=120.0).speed(0.5));
-                    ui.checkbox(&mut self.style.shadow, "Shadow");
+                    ui.checkbox(&mut self.style.shadow, tr!("prop-shadow"));
                 }
                 Kind::Obfuscate => {
-                    ui.label("Mode");
-                    ui.selectable_value(&mut self.style.obfuscate, ObfuscateMode::Pixelate, "Pixelate");
-                    ui.selectable_value(&mut self.style.obfuscate, ObfuscateMode::Blur, "Blur");
-                    ui.label(if self.style.obfuscate == ObfuscateMode::Pixelate { "Pixel size" } else { "Blur radius" });
+                    ui.label(tr!("prop-mode"));
+                    ui.selectable_value(&mut self.style.obfuscate, ObfuscateMode::Pixelate, tr!("prop-pixelate"));
+                    ui.selectable_value(&mut self.style.obfuscate, ObfuscateMode::Blur, tr!("prop-blur"));
+                    ui.label(if self.style.obfuscate == ObfuscateMode::Pixelate { tr!("prop-pixel-size") } else { tr!("prop-blur-radius") });
                     ui.add(egui::Slider::new(&mut self.style.strength, 2.0..=50.0).integer());
                 }
                 _ => {
                     ui.label(match kind {
-                        Kind::Text => "Text colour",
-                        Kind::Speech => "Line and text colour",
-                        _ => "Line colour",
+                        Kind::Text => tr!("prop-text-colour"),
+                        Kind::Speech => tr!("prop-line-text-colour"),
+                        _ => tr!("prop-line-colour"),
                     });
                     egui::color_picker::color_edit_button_srgba(ui, &mut self.style.stroke, egui::color_picker::Alpha::BlendOrAdditive);
                     if kind.has_text() {
-                        ui.label("Text size");
+                        ui.label(tr!("prop-text-size"));
                         ui.add(egui::DragValue::new(&mut self.style.font_size).range(6.0..=200.0).speed(0.5));
                     }
                     if kind != Kind::Text {
-                        ui.label("Thickness");
+                        ui.label(tr!("prop-thickness"));
                         ui.add(egui::DragValue::new(&mut self.style.width).range(0.0..=40.0).speed(0.2));
                     }
                     if kind.has_fill() {
-                        ui.label(if kind == Kind::Text { "Background" } else { "Fill" });
+                        ui.label(if kind == Kind::Text { tr!("prop-background") } else { tr!("prop-fill") });
                         egui::color_picker::color_edit_button_srgba(ui, &mut self.style.fill, egui::color_picker::Alpha::BlendOrAdditive);
-                        if self.style.fill.a() > 0 && ui.small_button("No fill").clicked() {
+                        if self.style.fill.a() > 0 && ui.small_button(tr!("prop-no-fill")).clicked() {
                             self.style.fill = Color32::TRANSPARENT;
                         }
                     }
                     if kind.has_shadow() {
-                        ui.checkbox(&mut self.style.shadow, "Shadow");
+                        ui.checkbox(&mut self.style.shadow, tr!("prop-shadow"));
                     }
                 }
             }
@@ -613,10 +614,10 @@ impl Editor {
             ui.separator();
             let zoom_label = match self.zoom {
                 Some(z) => format!("{:.0}%", z * 100.0),
-                None => "Fit".into(),
+                None => tr!("zoom-fit"),
             };
-            ui.menu_button(format!("Zoom: {zoom_label}"), |ui| {
-                if ui.button(format!("Fit to window ({})", keys("Mod+0"))).clicked() {
+            ui.menu_button(tr!("zoom-label", zoom = zoom_label), |ui| {
+                if ui.button(tr!("zoom-fit-window", keys = keys("Mod+0"))).clicked() {
                     self.zoom = None;
                 }
                 for z in [0.25, 0.5, 1.0, 2.0, 4.0] {
@@ -877,7 +878,7 @@ impl Editor {
         }
         ui.painter().rect_stroke(rect.expand(2.0), 2.0, Stroke::new(1.0, Color32::from_rgb(0, 120, 215)), StrokeKind::Outside);
         let edit = egui::TextEdit::multiline(&mut e.text)
-            .font(FontId::proportional(e.style.font_size * view.scale))
+            .font(annotation_font(e.style.font_size * view.scale))
             .text_color(e.style.stroke)
             .frame(egui::Frame::NONE)
             .margin(egui::Margin::ZERO)
@@ -906,11 +907,33 @@ fn icon_button(ui: &mut Ui, glyph: &str, enabled: bool, tooltip: &str) -> egui::
     ui.add_enabled(enabled, button).on_hover_text(tooltip).on_disabled_hover_text(tooltip)
 }
 
-/// Make the Phosphor icon font available. Call once at startup.
-pub fn install_fonts(ctx: &egui::Context) {
+/// Font family for text typed into screenshots. It is the bundled font the
+/// exporter also uses, so annotations look the same on the canvas, in the
+/// saved image and on every OS, whatever font the interface uses.
+pub const ANNOTATION_FAMILY: &str = "rustshot-annotation";
+
+pub fn annotation_font(size: f32) -> FontId {
+    FontId::new(size, egui::FontFamily::Name(ANNOTATION_FAMILY.into()))
+}
+
+/// Font setup the editor needs: Phosphor icons (in proportional and
+/// monospace text) and the annotation family. The app may add its own
+/// interface font on top before installing these.
+pub fn font_definitions() -> egui::FontDefinitions {
     let mut fonts = egui::FontDefinitions::default();
+    let annotation: Vec<String> = fonts.families.get(&egui::FontFamily::Proportional).cloned().unwrap_or_default();
     egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
-    ctx.set_fonts(fonts);
+    // Icons inside monospace text too (e.g. keycaps in Settings).
+    if let Some(mono) = fonts.families.get_mut(&egui::FontFamily::Monospace) {
+        mono.push("phosphor".into());
+    }
+    fonts.families.insert(egui::FontFamily::Name(ANNOTATION_FAMILY.into()), annotation);
+    fonts
+}
+
+/// Install [`font_definitions`] as is (bundled interface font).
+pub fn install_fonts(ctx: &egui::Context) {
+    ctx.set_fonts(font_definitions());
 }
 
 /// Shift-drag: squares/circles for boxes, 45° steps for lines.
@@ -983,7 +1006,7 @@ fn paint_shapes(painter: &egui::Painter, e: &Element, view: View, opts: Paint, m
                 painter.rect_filled(view.rect(e.bounds().expand(TEXT_PADDING)), 0.0, col(s.fill));
             }
             if opts.show_text {
-                painter.text(view.to_screen(e.a), Align2::LEFT_TOP, &e.text, FontId::proportional(s.font_size * view.scale), col(s.stroke));
+                painter.text(view.to_screen(e.a), Align2::LEFT_TOP, &e.text, annotation_font(s.font_size * view.scale), col(s.stroke));
             }
         }
         Kind::Speech => {
@@ -1014,7 +1037,7 @@ fn paint_shapes(painter: &egui::Painter, e: &Element, view: View, opts: Paint, m
             }
             if opts.show_text && mono.is_none() {
                 let origin = view.to_screen(r.min + Vec2::splat(SPEECH_PADDING));
-                painter.text(origin, Align2::LEFT_TOP, &e.text, FontId::proportional(s.font_size * view.scale), s.stroke);
+                painter.text(origin, Align2::LEFT_TOP, &e.text, annotation_font(s.font_size * view.scale), s.stroke);
             }
         }
         Kind::Counter => {
@@ -1022,7 +1045,7 @@ fn paint_shapes(painter: &egui::Painter, e: &Element, view: View, opts: Paint, m
             painter.circle_filled(r.center(), r.width() / 2.0, col(s.stroke));
             if mono.is_none() {
                 let label = opts.number.unwrap_or(1).to_string();
-                painter.text(r.center(), Align2::CENTER_CENTER, label, FontId::proportional(s.font_size * view.scale), contrasting_text(s.stroke));
+                painter.text(r.center(), Align2::CENTER_CENTER, label, annotation_font(s.font_size * view.scale), contrasting_text(s.stroke));
             }
         }
         Kind::Highlight | Kind::Obfuscate => {

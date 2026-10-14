@@ -1,0 +1,12 @@
+[package]
+name = "rustshot-i18n"
+version.workspace = true
+repository.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+fluent-bundle = "0.16"
+log = "0.4.34"
+sys-locale = "0.3"
+unic-langid = "0.9"

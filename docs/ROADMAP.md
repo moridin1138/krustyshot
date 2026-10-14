@@ -20,7 +20,7 @@ Done, to be released as 0.2.0: speech bubbles, step counters, highlight modes, d
 
 ## Backlog
 
-- **Multilingual UI.** Translate every user-facing string and pick the language from the system locale, with an override in Preferences. Likely approach: [Fluent](https://projectfluent.org/) via the `fluent` / `i18n-embed` crates, with one `.ftl` file per language under `locales/`. Greenshot ships in 30+ languages, so its translations are a useful list of target languages (wording must be our own).
+- More languages, and native-speaker review of the French, Spanish and German drafts (see [TRANSLATING.md](TRANSLATING.md)). Chinese, Japanese and Korean need CJK fallback fonts; right-to-left languages wait on support in the UI toolkit.
 - Signed and notarised macOS builds (needs an Apple Developer account).
 - Windows installer and embedded `.exe` icon.
 - Linux packages (AppImage, .deb, Flatpak) and Wayland capture through xdg-desktop-portal.

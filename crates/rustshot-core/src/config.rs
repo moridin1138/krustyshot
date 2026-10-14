@@ -6,6 +6,7 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
 use crate::geometry::Region;
+use rustshot_i18n::tr;
 
 /// Where a finished capture goes. Mirrors Greenshot's "destinations".
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -30,13 +31,13 @@ impl Destination {
         Destination::FileAs,
     ];
 
-    pub fn label(self) -> &'static str {
+    pub fn label(self) -> String {
         match self {
-            Destination::Picker => "Ask me (destination picker)",
-            Destination::Editor => "Open in image editor",
-            Destination::Clipboard => "Copy to clipboard",
-            Destination::File => "Save directly",
-            Destination::FileAs => "Save as (dialog)",
+            Destination::Picker => tr!("dest-picker"),
+            Destination::Editor => tr!("dest-editor"),
+            Destination::Clipboard => tr!("dest-clipboard"),
+            Destination::File => tr!("dest-file"),
+            Destination::FileAs => tr!("dest-file-as"),
         }
     }
 }
@@ -95,13 +96,13 @@ impl TrayClick {
         TrayClick::CaptureLastRegion,
     ];
 
-    pub fn label(self) -> &'static str {
+    pub fn label(self) -> String {
         match self {
-            TrayClick::ShowMenu => "Show the menu",
-            TrayClick::CaptureRegion => "Capture region",
-            TrayClick::CaptureWindow => "Capture window",
-            TrayClick::CaptureFullscreen => "Capture full screen",
-            TrayClick::CaptureLastRegion => "Capture last region",
+            TrayClick::ShowMenu => tr!("tray-click-menu"),
+            TrayClick::CaptureRegion => tr!("capture-region"),
+            TrayClick::CaptureWindow => tr!("capture-window"),
+            TrayClick::CaptureFullscreen => tr!("capture-fullscreen"),
+            TrayClick::CaptureLastRegion => tr!("capture-last-region"),
         }
     }
 }
@@ -160,6 +161,8 @@ pub struct Config {
     pub notifications: bool,
     /// Left click on the tray icon. (Right click always opens the menu.)
     pub tray_click: TrayClick,
+    /// Interface language code (`en`, `fr`, …); `None` follows the system.
+    pub language: Option<String>,
     /// Region used by "Capture last region".
     pub last_region: Option<Region>,
 }
@@ -182,6 +185,7 @@ impl Default for Config {
             capture_delay_secs: 0,
             notifications: true,
             tray_click: TrayClick::ShowMenu,
+            language: None,
             last_region: None,
         }
     }

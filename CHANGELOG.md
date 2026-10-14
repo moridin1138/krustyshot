@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+
+- Redesigned Settings window (was Preferences): a sidebar with General, Capture, Shortcuts, Saving and About sections, and every change applies immediately.
+- Shortcut recorder: click a shortcut and press the new keys, instead of typing names like `alt+shift+KeyR`.
+- Filename buttons that insert the date, time, window title or user name, with a live example.
+- Open at login.
+- Check for updates (About section), which asks GitHub only when you click it.
+- `--settings` launch option to open Settings straight away.
+- French, Spanish and German translations (machine-drafted). The language follows the system and can be changed in Settings > General. See [docs/TRANSLATING.md](docs/TRANSLATING.md) to improve a translation or add a language.
+
+### Changed
+
+- The interface uses each system's own font (SF Pro on macOS, Segoe UI on Windows, Cantarell, Noto Sans or DejaVu Sans on Linux) at slightly larger sizes, with higher-contrast secondary text. Text typed into screenshots keeps the bundled font so it looks the same everywhere.
+
 ## [0.2.0] - 2026-10-14
 
 Phase 2: Greenshot editor parity.

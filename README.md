@@ -16,8 +16,9 @@ A cross-platform screenshot tool modelled on [Greenshot](https://getgreenshot.or
 - Image editor with Phosphor icons: select, move and resize, rectangle, ellipse, line, arrow, freehand, text, speech bubble, step counter, highlight (marker, spotlight, grey out the rest, magnify), obfuscate (pixelate or blur), crop, drop shadows, undo and redo
 - Effects: drop shadow, torn edges, border, greyscale, invert, rotate, resize
 - Notifications after saving or copying (click to show the file)
+- English, French, Spanish and German interface, following the system language
 - Open an image from the clipboard or from a file
-- Preferences: hotkeys, destinations, capture options, output folder, Greenshot-style filename pattern, PNG/JPG/BMP/GIF, JPEG quality
+- Settings: shortcut recorder, after-capture actions, capture options, output folder, Greenshot-style filename pattern, PNG/JPG/BMP/GIF, open at login, check for updates
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed in each version and [docs/ROADMAP.md](docs/ROADMAP.md) for what's planned.
 
@@ -30,7 +31,7 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each version and [docs/ROAD
 | Capture full screen | ⌥⇧F | Ctrl+Print Screen |
 | Capture last region | ⌥⇧L | Shift+Print Screen |
 
-Change them in Preferences. macOS keeps ⌘⇧3/4/5 for its own screenshot tool.
+Change them in Settings (click a shortcut and press the new keys). macOS keeps ⌘⇧3/4/5 for its own screenshot tool.
 
 ### Editor shortcuts
 
@@ -94,6 +95,7 @@ The bundle is written to `target/release/bundle/Rustshot.app` and runs as a menu
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): how the code is organised and how a capture flows through it
 - [docs/RELEASING.md](docs/RELEASING.md): versioning rules and the release checklist
 - [docs/ROADMAP.md](docs/ROADMAP.md): planned phases and the backlog
+- [docs/TRANSLATING.md](docs/TRANSLATING.md): fixing translations and adding languages
 - [CHANGELOG.md](CHANGELOG.md): release history
 
 ## Settings

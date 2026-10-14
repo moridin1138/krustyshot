@@ -40,6 +40,26 @@ pub fn make_transient(title: &str) {
     let _ = title;
 }
 
+/// The macOS window number of our window with this title (for debugging tools).
+pub fn window_number(title: &str) -> Option<isize> {
+    #[cfg(target_os = "macos")]
+    {
+        use objc2_app_kit::NSApplication;
+        use objc2_foundation::MainThreadMarker;
+        let mtm = MainThreadMarker::new()?;
+        NSApplication::sharedApplication(mtm)
+            .windows()
+            .iter()
+            .find(|w| w.title().to_string() == title)
+            .map(|w| w.windowNumber())
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = title;
+        None
+    }
+}
+
 /// Show a file in Finder / Explorer / the file manager.
 pub fn reveal(path: &std::path::Path) {
     let result = if cfg!(target_os = "macos") {

@@ -11,4 +11,5 @@ egui = "0.36.2"
 egui-phosphor = "0.14"
 epaint_default_fonts = "0.36.2"
 image = "0.25.10"
+rustshot-i18n = { path = "../rustshot-i18n" }
 tiny-skia = "0.12.0"

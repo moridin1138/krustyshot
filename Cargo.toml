@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/rustshot-core", "crates/rustshot-editor", "crates/rustshot-app", "xtask"]
+members = ["crates/rustshot-i18n", "crates/rustshot-core", "crates/rustshot-editor", "crates/rustshot-app", "xtask"]
 
 [workspace.package]
 version = "0.2.0"

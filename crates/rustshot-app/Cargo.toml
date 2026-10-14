@@ -8,6 +8,7 @@ repository.workspace = true
 [dependencies]
 anyhow = "1.0.104"
 chrono = "0.4.45"
+directories = "6"
 eframe = "0.36.2"
 egui = "0.36.2"
 egui-phosphor = "0.14"
@@ -17,6 +18,7 @@ log = "0.4.34"
 rfd = "0.17.2"
 rustshot-core = { path = "../rustshot-core" }
 rustshot-editor = { path = "../rustshot-editor" }
+rustshot-i18n = { path = "../rustshot-i18n" }
 tray-icon = "0.26.1"
 winit = "0.30"
 

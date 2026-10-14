@@ -7,4 +7,4 @@ mod editor;
 pub mod export;
 pub mod raster;
 
-pub use editor::{install_fonts, Editor, EditorRequest};
+pub use editor::{annotation_font, font_definitions, install_fonts, Editor, EditorRequest, ANNOTATION_FAMILY};

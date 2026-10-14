@@ -72,12 +72,12 @@ impl HighlightMode {
     pub const ALL: [HighlightMode; 4] =
         [HighlightMode::Text, HighlightMode::Area, HighlightMode::Grayscale, HighlightMode::Magnify];
 
-    pub fn label(self) -> &'static str {
+    pub fn label(self) -> String {
         match self {
-            HighlightMode::Text => "Marker",
-            HighlightMode::Area => "Spotlight",
-            HighlightMode::Grayscale => "Grey out the rest",
-            HighlightMode::Magnify => "Magnify",
+            HighlightMode::Text => rustshot_i18n::tr!("highlight-marker"),
+            HighlightMode::Area => rustshot_i18n::tr!("highlight-spotlight"),
+            HighlightMode::Grayscale => rustshot_i18n::tr!("highlight-grey"),
+            HighlightMode::Magnify => rustshot_i18n::tr!("highlight-magnify"),
         }
     }
 }

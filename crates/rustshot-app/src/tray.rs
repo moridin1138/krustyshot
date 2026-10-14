@@ -3,6 +3,7 @@
 use std::str::FromStr;
 
 use rustshot_core::Config;
+use rustshot_i18n::tr;
 use tray_icon::menu::{accelerator::Accelerator, Menu, MenuId, MenuItem, PredefinedMenuItem};
 use tray_icon::{Icon, TrayIcon, TrayIconBuilder};
 
@@ -31,19 +32,19 @@ impl Tray {
         let menu = Menu::new();
         let hk = &config.hotkeys;
         menu.append_items(&[
-            &item(CAPTURE_REGION, "Capture region", Some(&hk.region)),
-            &item(CAPTURE_LAST_REGION, "Capture last region", Some(&hk.last_region)),
-            &item(CAPTURE_WINDOW, "Capture window", Some(&hk.window)),
-            &item(CAPTURE_FULLSCREEN, "Capture full screen", Some(&hk.fullscreen)),
+            &item(CAPTURE_REGION, &tr!("capture-region"), Some(&hk.region)),
+            &item(CAPTURE_LAST_REGION, &tr!("capture-last-region"), Some(&hk.last_region)),
+            &item(CAPTURE_WINDOW, &tr!("capture-window"), Some(&hk.window)),
+            &item(CAPTURE_FULLSCREEN, &tr!("capture-fullscreen"), Some(&hk.fullscreen)),
             &PredefinedMenuItem::separator(),
-            &item(OPEN_CLIPBOARD, "Open image from clipboard", None),
-            &item(OPEN_FILE, "Open image from file…", None),
-            &item(OPEN_FOLDER, "Open output folder", None),
+            &item(OPEN_CLIPBOARD, &tr!("menu-open-clipboard"), None),
+            &item(OPEN_FILE, &tr!("menu-open-file"), None),
+            &item(OPEN_FOLDER, &tr!("menu-open-folder"), None),
             &PredefinedMenuItem::separator(),
-            &item(PREFERENCES, "Preferences…", None),
-            &item(ABOUT, "About Rustshot", None),
+            &item(PREFERENCES, &tr!("menu-settings"), None),
+            &item(ABOUT, &tr!("menu-about"), None),
             &PredefinedMenuItem::separator(),
-            &item(QUIT, "Quit Rustshot", None),
+            &item(QUIT, &tr!("menu-quit"), None),
         ])?;
 
         let builder = TrayIconBuilder::new()
