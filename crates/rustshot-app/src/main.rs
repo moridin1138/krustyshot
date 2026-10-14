@@ -17,9 +17,12 @@ fn main() -> eframe::Result {
     // The root window is never meant to be seen: the app lives in the tray
     // and opens overlay/editor/settings windows as child viewports.
     let viewport = egui::ViewportBuilder::default()
-        .with_title("Rustshot")
+        .with_title(platform::BACKGROUND_TITLE)
         .with_inner_size([1.0, 1.0])
-        .with_position([-10_000.0, -10_000.0])
+        // Keep it on-screen: an off-screen window makes macOS Mission Control
+        // zoom all the way out to fit it. It is transparent, click-through,
+        // and hidden from Mission Control by `platform::hide_background_window`.
+        .with_position([0.0, 0.0])
         .with_decorations(false)
         .with_transparent(true)
         .with_resizable(false)

@@ -35,7 +35,7 @@ There are three coordinate spaces, and mixing them up is the most likely source 
 
 ## The app shell (`rustshot-app`)
 
-eframe always has a root window. Rustshot keeps it as a 1×1, transparent, click-through window placed off-screen, and opens everything else as child viewports. The root can't simply be hidden: eframe stops running the UI of a hidden root, and child windows can only be opened from that UI.
+eframe always has a root window. Rustshot keeps it as a 1×1, transparent, click-through window in the top-left corner (`platform::hide_background_window` also hides it from Mission Control and window cycling), and opens everything else as child viewports. It must stay on-screen: an off-screen window makes Mission Control zoom out to fit it. The root can't simply be hidden: eframe stops running the UI of a hidden root, and child windows can only be opened from that UI.
 
 On macOS the event loop is set to the Accessory activation policy, so there is no Dock icon or app menu (`platform.rs`). The bundle's `Info.plist` (`crates/rustshot-app/bundle/Info.plist`, filled in by `scripts/bundle-macos.sh`) sets `LSUIElement` for the same effect when launched as an `.app`.
 

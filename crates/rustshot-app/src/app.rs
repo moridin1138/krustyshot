@@ -78,6 +78,7 @@ pub struct App {
     settings: Option<SettingsWindow>,
     notices: Vec<Notice>,
     quit: bool,
+    background_hidden: bool,
 }
 
 impl App {
@@ -86,6 +87,7 @@ impl App {
         // Cmd +/- are used for canvas zoom in the editor.
         ctx.options_mut(|o| o.zoom_with_keyboard = false);
         rustshot_editor::install_fonts(&ctx);
+        platform::hide_background_window();
 
         let (tx, rx) = channel();
         {
@@ -127,6 +129,7 @@ impl App {
             settings: None,
             notices: Vec::new(),
             quit: false,
+            background_hidden: false,
         };
 
         // Let macOS show its own permission prompt once (this also adds Rustshot
@@ -623,6 +626,11 @@ impl eframe::App for App {
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
+        if !self.background_hidden {
+            // Again here in case the window didn't exist yet in `App::new`.
+            platform::hide_background_window();
+            self.background_hidden = true;
+        }
         self.show_overlay(&ctx);
         self.show_picker(&ctx);
         self.show_editors(&ctx);

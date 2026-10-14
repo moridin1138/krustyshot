@@ -27,6 +27,34 @@ pub fn disable_touch_bar() {
     }
 }
 
+/// Title of eframe's root window, which Rustshot never shows.
+pub const BACKGROUND_TITLE: &str = "Rustshot Background";
+
+/// Make the always-present root window invisible to the user: fully
+/// transparent, and excluded from Mission Control, App Exposé and window
+/// cycling. (It can't simply be hidden, because eframe stops running the UI
+/// of a hidden root window.)
+pub fn hide_background_window() {
+    #[cfg(target_os = "macos")]
+    {
+        use objc2_app_kit::{NSApplication, NSWindowCollectionBehavior};
+        use objc2_foundation::MainThreadMarker;
+
+        let Some(mtm) = MainThreadMarker::new() else { return };
+        for window in NSApplication::sharedApplication(mtm).windows().iter() {
+            if window.title().to_string() == BACKGROUND_TITLE {
+                window.setAlphaValue(0.0);
+                window.setIgnoresMouseEvents(true);
+                window.setCollectionBehavior(
+                    NSWindowCollectionBehavior::Transient
+                        | NSWindowCollectionBehavior::IgnoresCycle
+                        | NSWindowCollectionBehavior::CanJoinAllSpaces,
+                );
+            }
+        }
+    }
+}
+
 pub const OVERLAY_TITLE: &str = "Rustshot Overlay";
 
 /// Window title for the overlay on monitor `i`, so each window can be found again.

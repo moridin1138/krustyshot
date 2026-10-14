@@ -13,6 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - macOS: captures no longer silently show only the desktop background when Rustshot lacks Screen Recording permission. Rustshot now explains how to grant it, with buttons to open System Settings, reset a stale permission entry, and quit so it can be reopened.
 - macOS: only one permission prompt appears at startup, instead of Apple's prompt and Rustshot's window competing.
 - macOS: fixed a crash when closing windows, caused by AppKit's Touch Bar support.
+- macOS: Mission Control no longer zooms all the way out on the desktop where Rustshot is running. Rustshot's hidden background window is now kept on-screen and excluded from Mission Control.
 - Shortcut hints in tooltips showed empty boxes for the ⇧ and ⌥ symbols. They now read, for example, "Cmd+Shift+S" on macOS and "Ctrl+Shift+S" elsewhere.
 
 ### Changed
