@@ -2,6 +2,7 @@
 //! highlights and obfuscation, then export a flattened image.
 
 pub mod document;
+pub mod effects;
 mod editor;
 pub mod export;
 pub mod raster;

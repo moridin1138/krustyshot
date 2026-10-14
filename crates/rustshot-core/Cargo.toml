@@ -13,5 +13,12 @@ directories = "6.0.0"
 image = "0.25.10"
 log = "0.4.34"
 serde = { version = "1.0.229", features = ["derive"] }
+tiny-skia = "0.12"
 toml = "1.1.8"
 xcap = "0.9.8"
+
+[target."cfg(windows)".dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+x11rb = "0.13"

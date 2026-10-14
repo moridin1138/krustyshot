@@ -14,6 +14,46 @@ pub fn configure_event_loop<T>(builder: &mut winit::event_loop::EventLoopBuilder
 /// Title of eframe's root window, which Rustshot never shows.
 pub const BACKGROUND_TITLE: &str = "Rustshot Background";
 
+/// Title of the "Saved" / "Copied" toast window.
+pub const TOAST_TITLE: &str = "Rustshot Notification";
+
+/// Keep a helper window out of Mission Control, App Exposé and window
+/// cycling (macOS), and on whichever Space is active.
+pub fn make_transient(title: &str) {
+    #[cfg(target_os = "macos")]
+    {
+        use objc2_app_kit::{NSApplication, NSWindowCollectionBehavior};
+        use objc2_foundation::MainThreadMarker;
+
+        let Some(mtm) = MainThreadMarker::new() else { return };
+        for window in NSApplication::sharedApplication(mtm).windows().iter() {
+            if window.title().to_string() == title {
+                window.setCollectionBehavior(
+                    NSWindowCollectionBehavior::Transient
+                        | NSWindowCollectionBehavior::IgnoresCycle
+                        | NSWindowCollectionBehavior::CanJoinAllSpaces,
+                );
+            }
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = title;
+}
+
+/// Show a file in Finder / Explorer / the file manager.
+pub fn reveal(path: &std::path::Path) {
+    let result = if cfg!(target_os = "macos") {
+        std::process::Command::new("open").arg("-R").arg(path).spawn()
+    } else if cfg!(target_os = "windows") {
+        std::process::Command::new("explorer").arg(format!("/select,{}", path.display())).spawn()
+    } else {
+        std::process::Command::new("xdg-open").arg(path.parent().unwrap_or(path)).spawn()
+    };
+    if let Err(e) = result {
+        log::warn!("could not show {}: {e}", path.display());
+    }
+}
+
 /// Make the always-present root window invisible to the user: fully
 /// transparent, and excluded from Mission Control, App Exposé and window
 /// cycling. (It can't simply be hidden, because eframe stops running the UI

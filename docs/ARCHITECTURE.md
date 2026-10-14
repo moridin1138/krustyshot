@@ -63,7 +63,7 @@ App::start_capture(mode)
 Region / Window ─────► Overlay (frozen screenshot on each monitor)
    │                     user drags a region or clicks a window
    │                     Snapshot::crop() → RgbaImage
-Fullscreen ──► Snapshot::stitch_all()
+Fullscreen ──► Snapshot::stitch_all()   (compose() over every display)
 Last region ─► Snapshot::crop(config.last_region)
    │
    ▼
@@ -83,13 +83,14 @@ The screen is captured before any Rustshot window appears, so the overlay shows 
 |---|---|
 | `document.rs` | `Document` (shared base image + `Vec<Element>`), `Element`, `Style`, hit testing, crop, and `History` |
 | `raster.rs` | Pixel effects: pixelate, blur, highlight |
-| `export.rs` | `flatten()`: composites raster effects, then draws shapes and text with tiny-skia |
+| `export.rs` | `flatten()`: composites raster effects, then draws shapes, shadows and text with tiny-skia |
+| `effects.rs` | Whole-image effects (border, shadow, torn edges, greyscale, invert, rotate, resize) that also move, rotate and scale the annotations |
 | `editor.rs` | The egui UI: toolbar, properties bar, canvas, tools and shortcuts |
 
 There are two kinds of element:
 
-- **Vector** elements (rectangle, ellipse, line, arrow, freehand, text) are drawn on top of the image. The canvas paints them with egui; export paints them with tiny-skia.
-- **Raster** elements (highlight, obfuscate) change the pixels underneath. They are baked into the canvas texture whenever the document revision changes, and into the exported image by `raster::composite`.
+- **Vector** elements (rectangle, ellipse, line, arrow, freehand, text, speech bubble, step counter) are drawn on top of the image. The canvas paints them with egui; export paints them with tiny-skia. Shadows are a blurred silhouette in the saved image and a quick offset copy on the canvas. Step-counter numbers are not stored: they follow the counters' order in the document, so deleting one renumbers the rest.
+- **Raster** elements (highlight in its four styles, obfuscate) change the pixels underneath. They are baked into the canvas texture whenever the document revision changes, and into the exported image by `raster::composite`.
 
 Undo works by snapshot. Before each change the whole `Document` is pushed onto `History`. The base image is behind an `Arc`, so a snapshot only copies the element list, except after a crop, which creates a new base image.
 

@@ -14,7 +14,11 @@ pub enum Kind {
     Arrow,
     Freehand,
     Text,
-    /// Marker-style highlight (multiplies the area with the colour).
+    /// Rounded box with text and a tail pointing at something.
+    Speech,
+    /// Numbered circle; numbers follow the order counters were added.
+    Counter,
+    /// Highlight an area (see [`HighlightMode`]).
     Highlight,
     /// Pixelate or blur the area.
     Obfuscate,
@@ -31,7 +35,17 @@ impl Kind {
     }
 
     pub fn has_fill(self) -> bool {
-        matches!(self, Kind::Rect | Kind::Ellipse | Kind::Text)
+        matches!(self, Kind::Rect | Kind::Ellipse | Kind::Text | Kind::Speech)
+    }
+
+    /// Kinds whose content is text typed by the user.
+    pub fn has_text(self) -> bool {
+        matches!(self, Kind::Text | Kind::Speech)
+    }
+
+    /// Kinds that can cast a drop shadow.
+    pub fn has_shadow(self) -> bool {
+        !self.is_raster() && self != Kind::Text
     }
 }
 
@@ -39,6 +53,33 @@ impl Kind {
 pub enum ObfuscateMode {
     Pixelate,
     Blur,
+}
+
+/// The four highlighter styles from Greenshot.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HighlightMode {
+    /// Marker pen: multiply the area with the colour.
+    Text,
+    /// Darken everything outside the area.
+    Area,
+    /// Turn everything outside the area grey.
+    Grayscale,
+    /// Show the middle of the area magnified.
+    Magnify,
+}
+
+impl HighlightMode {
+    pub const ALL: [HighlightMode; 4] =
+        [HighlightMode::Text, HighlightMode::Area, HighlightMode::Grayscale, HighlightMode::Magnify];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            HighlightMode::Text => "Marker",
+            HighlightMode::Area => "Spotlight",
+            HighlightMode::Grayscale => "Grey out the rest",
+            HighlightMode::Magnify => "Magnify",
+        }
+    }
 }
 
 /// Visual properties shared by all element kinds.
@@ -50,9 +91,12 @@ pub struct Style {
     pub fill: Color32,
     pub font_size: f32,
     pub highlight: Color32,
+    pub highlight_mode: HighlightMode,
     pub obfuscate: ObfuscateMode,
     /// Block size for pixelate, radius for blur (image pixels).
     pub strength: f32,
+    /// Soft drop shadow under shapes.
+    pub shadow: bool,
 }
 
 impl Default for Style {
@@ -63,11 +107,16 @@ impl Default for Style {
             fill: Color32::TRANSPARENT,
             font_size: 24.0,
             highlight: Color32::from_rgb(255, 235, 0),
+            highlight_mode: HighlightMode::Text,
             obfuscate: ObfuscateMode::Pixelate,
             strength: 12.0,
+            shadow: true,
         }
     }
 }
+
+/// Space between a speech bubble's edge and its text (image pixels).
+pub const SPEECH_PADDING: f32 = 12.0;
 
 /// One annotation. Positions are in image pixel coordinates.
 #[derive(Clone, Debug, PartialEq)]
@@ -75,6 +124,8 @@ pub struct Element {
     pub kind: Kind,
     pub a: Pos2,
     pub b: Pos2,
+    /// Speech bubble: where the tail points.
+    pub tail: Pos2,
     /// Freehand stroke points.
     pub points: Vec<Pos2>,
     pub text: String,
@@ -83,7 +134,49 @@ pub struct Element {
 
 impl Element {
     pub fn new(kind: Kind, at: Pos2, style: Style) -> Self {
-        Self { kind, a: at, b: at, points: Vec::new(), text: String::new(), style }
+        Self { kind, a: at, b: at, tail: at, points: Vec::new(), text: String::new(), style }
+    }
+
+    /// A step counter centred on `center`.
+    pub fn counter(center: Pos2, style: Style) -> Self {
+        let mut e = Self::new(Kind::Counter, center, style);
+        e.a = center;
+        e.fit_content();
+        e
+    }
+
+    /// Diameter of a step counter for its font size.
+    pub fn counter_diameter(&self) -> f32 {
+        (self.style.font_size * 1.6).max(16.0)
+    }
+
+    /// Keep size-derived geometry in step with the content: text boxes fit
+    /// their text, counters follow the font size, speech bubbles grow to
+    /// fit their text.
+    pub fn fit_content(&mut self) {
+        match self.kind {
+            Kind::Text => self.b = self.a + crate::export::measure_text(&self.text, self.style.font_size),
+            Kind::Counter => {
+                let c = self.bounds().center();
+                let r = self.counter_diameter() / 2.0;
+                self.a = c - Vec2::splat(r);
+                self.b = c + Vec2::splat(r);
+            }
+            Kind::Speech => {
+                let r = self.bounds();
+                let need = crate::export::measure_text(&self.text, self.style.font_size) + Vec2::splat(2.0 * SPEECH_PADDING);
+                let (a, b) = (r.min, r.max.max(r.min + need));
+                self.a = a;
+                self.b = b;
+            }
+            _ => {}
+        }
+    }
+
+    /// Default tail position for a new speech bubble: below its left side.
+    pub fn default_tail(&mut self) {
+        let r = self.bounds();
+        self.tail = Pos2::new(r.min.x + r.width() * 0.25, r.max.y + r.height() * 0.6 + 20.0);
     }
 
     pub fn bounds(&self) -> Rect {
@@ -97,6 +190,7 @@ impl Element {
     pub fn translate(&mut self, d: Vec2) {
         self.a += d;
         self.b += d;
+        self.tail += d;
         for p in &mut self.points {
             *p += d;
         }
@@ -111,7 +205,7 @@ impl Element {
                 .points
                 .windows(2)
                 .any(|w| dist_to_segment(p, w[0], w[1]) <= tol),
-            Kind::Ellipse => {
+            Kind::Ellipse | Kind::Counter => {
                 let r = self.bounds().expand(tol);
                 let c = r.center();
                 let (rx, ry) = (r.width() / 2.0, r.height() / 2.0);
@@ -121,34 +215,52 @@ impl Element {
                 let (dx, dy) = ((p.x - c.x) / rx, (p.y - c.y) / ry);
                 dx * dx + dy * dy <= 1.0
             }
+            Kind::Speech => {
+                self.bounds().expand(tol).contains(p) || {
+                    let base = crate::export::speech_tail_base(self.bounds(), self.tail);
+                    dist_to_segment(p, base[0], self.tail) <= tol + 4.0
+                        || dist_to_segment(p, base[1], self.tail) <= tol + 4.0
+                }
+            }
             _ => self.bounds().expand(tol).contains(p),
         }
     }
 
-    /// Resize handles: which of `a`/`b` each handle's x and y come from.
+    /// Handles the user can drag on the selected element.
     pub fn handles(&self) -> Vec<Handle> {
+        let corner = |x_from_b, y_from_b| Handle::Corner { x_from_b, y_from_b };
         match self.kind {
-            Kind::Line | Kind::Arrow => vec![Handle { x_from_b: false, y_from_b: false }, Handle { x_from_b: true, y_from_b: true }],
-            Kind::Freehand | Kind::Text => Vec::new(),
-            _ => vec![
-                Handle { x_from_b: false, y_from_b: false },
-                Handle { x_from_b: true, y_from_b: false },
-                Handle { x_from_b: false, y_from_b: true },
-                Handle { x_from_b: true, y_from_b: true },
+            Kind::Line | Kind::Arrow => vec![corner(false, false), corner(true, true)],
+            Kind::Freehand | Kind::Text | Kind::Counter => Vec::new(),
+            Kind::Speech => vec![
+                corner(false, false),
+                corner(true, false),
+                corner(false, true),
+                corner(true, true),
+                Handle::Tail,
             ],
+            _ => vec![corner(false, false), corner(true, false), corner(false, true), corner(true, true)],
         }
     }
 
     pub fn handle_pos(&self, h: Handle) -> Pos2 {
-        Pos2::new(
-            if h.x_from_b { self.b.x } else { self.a.x },
-            if h.y_from_b { self.b.y } else { self.a.y },
-        )
+        match h {
+            Handle::Corner { x_from_b, y_from_b } => Pos2::new(
+                if x_from_b { self.b.x } else { self.a.x },
+                if y_from_b { self.b.y } else { self.a.y },
+            ),
+            Handle::Tail => self.tail,
+        }
     }
 
     pub fn set_handle(&mut self, h: Handle, p: Pos2) {
-        if h.x_from_b { self.b.x = p.x } else { self.a.x = p.x }
-        if h.y_from_b { self.b.y = p.y } else { self.a.y = p.y }
+        match h {
+            Handle::Corner { x_from_b, y_from_b } => {
+                if x_from_b { self.b.x = p.x } else { self.a.x = p.x }
+                if y_from_b { self.b.y = p.y } else { self.a.y = p.y }
+            }
+            Handle::Tail => self.tail = p,
+        }
     }
 
     /// Too small to keep after creation (e.g. a click without a drag).
@@ -156,6 +268,7 @@ impl Element {
         match self.kind {
             Kind::Freehand => self.points.len() < 2,
             Kind::Text => self.text.trim().is_empty(),
+            Kind::Counter => false,
             Kind::Line | Kind::Arrow => self.a.distance(self.b) < 3.0,
             _ => {
                 let r = self.bounds();
@@ -165,10 +278,13 @@ impl Element {
     }
 }
 
+/// Something the user can drag to reshape the selected element.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Handle {
-    pub x_from_b: bool,
-    pub y_from_b: bool,
+pub enum Handle {
+    /// A corner or line end: which of `a`/`b` its x and y come from.
+    Corner { x_from_b: bool, y_from_b: bool },
+    /// The tip of a speech bubble's tail.
+    Tail,
 }
 
 pub fn dist_to_segment(p: Pos2, a: Pos2, b: Pos2) -> f32 {
@@ -194,6 +310,12 @@ impl Document {
 
     pub fn size(&self) -> Vec2 {
         Vec2::new(self.base.width() as f32, self.base.height() as f32)
+    }
+
+    /// The number shown on the step counter at `idx` (1-based, in the order
+    /// counters appear in the document, so deleting one renumbers the rest).
+    pub fn counter_number(&self, idx: usize) -> usize {
+        self.elements[..idx].iter().filter(|e| e.kind == Kind::Counter).count() + 1
     }
 
     /// Index of the top-most element under `p`.
@@ -314,6 +436,41 @@ mod tests {
         assert!(h.redo(&mut doc));
         assert_eq!(doc.elements.len(), 1);
         assert!(!h.redo(&mut doc));
+    }
+
+    #[test]
+    fn counters_number_in_order_and_renumber() {
+        let mut doc = Document::new(RgbaImage::new(100, 100));
+        doc.elements.push(Element::counter(Pos2::new(10.0, 10.0), Style::default()));
+        doc.elements.push(rect_el((0.0, 0.0), (5.0, 5.0)));
+        doc.elements.push(Element::counter(Pos2::new(50.0, 50.0), Style::default()));
+        doc.elements.push(Element::counter(Pos2::new(80.0, 80.0), Style::default()));
+        assert_eq!(doc.counter_number(3), 3);
+        doc.elements.remove(0);
+        assert_eq!(doc.counter_number(1), 1);
+        assert_eq!(doc.counter_number(2), 2);
+    }
+
+    #[test]
+    fn counter_follows_font_size_around_its_centre() {
+        let mut c = Element::counter(Pos2::new(40.0, 40.0), Style::default());
+        c.style.font_size = 50.0;
+        c.fit_content();
+        assert_eq!(c.bounds().center(), Pos2::new(40.0, 40.0));
+        assert_eq!(c.bounds().width(), 80.0);
+    }
+
+    #[test]
+    fn speech_tail_handle_moves_tail_and_hit_includes_it() {
+        let mut e = Element::new(Kind::Speech, Pos2::new(0.0, 0.0), Style::default());
+        e.b = Pos2::new(100.0, 50.0);
+        e.default_tail();
+        assert!(e.handles().contains(&Handle::Tail));
+        e.set_handle(Handle::Tail, Pos2::new(50.0, 150.0));
+        assert_eq!(e.tail, Pos2::new(50.0, 150.0));
+        assert!(e.hit(Pos2::new(50.0, 148.0), 2.0), "tail tip is clickable");
+        e.translate(Vec2::new(10.0, 0.0));
+        assert_eq!(e.tail, Pos2::new(60.0, 150.0));
     }
 
     #[test]

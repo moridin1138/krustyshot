@@ -74,6 +74,38 @@ impl OutputFormat {
     }
 }
 
+/// What a left click on the tray / menu-bar icon does.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TrayClick {
+    /// Open the menu (the platform default).
+    ShowMenu,
+    CaptureRegion,
+    CaptureWindow,
+    CaptureFullscreen,
+    CaptureLastRegion,
+}
+
+impl TrayClick {
+    pub const ALL: [TrayClick; 5] = [
+        TrayClick::ShowMenu,
+        TrayClick::CaptureRegion,
+        TrayClick::CaptureWindow,
+        TrayClick::CaptureFullscreen,
+        TrayClick::CaptureLastRegion,
+    ];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            TrayClick::ShowMenu => "Show the menu",
+            TrayClick::CaptureRegion => "Capture region",
+            TrayClick::CaptureWindow => "Capture window",
+            TrayClick::CaptureFullscreen => "Capture full screen",
+            TrayClick::CaptureLastRegion => "Capture last region",
+        }
+    }
+}
+
 /// Global hotkeys in `global-hotkey` syntax, e.g. `"alt+shift+KeyR"`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -120,6 +152,14 @@ pub struct Config {
     pub show_magnifier: bool,
     /// Copy the saved file's path to the clipboard after "Save directly".
     pub copy_path_after_save: bool,
+    /// Draw the mouse pointer into captures.
+    pub capture_pointer: bool,
+    /// Seconds to wait between a capture request and grabbing the screen.
+    pub capture_delay_secs: u32,
+    /// Show a system notification after saving or copying.
+    pub notifications: bool,
+    /// Left click on the tray icon. (Right click always opens the menu.)
+    pub tray_click: TrayClick,
     /// Region used by "Capture last region".
     pub last_region: Option<Region>,
 }
@@ -138,6 +178,10 @@ impl Default for Config {
             jpeg_quality: 90,
             show_magnifier: true,
             copy_path_after_save: false,
+            capture_pointer: false,
+            capture_delay_secs: 0,
+            notifications: true,
+            tray_click: TrayClick::ShowMenu,
             last_region: None,
         }
     }

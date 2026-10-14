@@ -6,8 +6,9 @@ use egui::{
 };
 use image::RgbaImage;
 
-use crate::document::{Document, Element, Handle, History, Kind, ObfuscateMode, Style};
-use crate::export::{self, arrow_head, measure_text, TEXT_PADDING};
+use crate::effects::Effect;
+use crate::document::{Document, Element, Handle, HighlightMode, History, Kind, ObfuscateMode, Style, SPEECH_PADDING};
+use crate::export::{self, arrow_head, contrasting_text, measure_text, speech_radius, speech_tail_base, TEXT_PADDING};
 use crate::raster;
 
 /// Something the host application must do on the editor's behalf.
@@ -28,13 +29,15 @@ enum Tool {
     Arrow,
     Freehand,
     Text,
+    Speech,
+    Counter,
     Highlight,
     Obfuscate,
     Crop,
 }
 
 impl Tool {
-    const ALL: [Tool; 10] = [
+    const ALL: [Tool; 12] = [
         Tool::Select,
         Tool::Rect,
         Tool::Ellipse,
@@ -42,6 +45,8 @@ impl Tool {
         Tool::Arrow,
         Tool::Freehand,
         Tool::Text,
+        Tool::Speech,
+        Tool::Counter,
         Tool::Highlight,
         Tool::Obfuscate,
         Tool::Crop,
@@ -55,6 +60,8 @@ impl Tool {
             Tool::Arrow => Kind::Arrow,
             Tool::Freehand => Kind::Freehand,
             Tool::Text => Kind::Text,
+            Tool::Speech => Kind::Speech,
+            Tool::Counter => Kind::Counter,
             Tool::Highlight => Kind::Highlight,
             Tool::Obfuscate => Kind::Obfuscate,
             Tool::Select | Tool::Crop => return None,
@@ -70,6 +77,8 @@ impl Tool {
             Tool::Arrow => "Arrow",
             Tool::Freehand => "Freehand",
             Tool::Text => "Text",
+            Tool::Speech => "Speech bubble",
+            Tool::Counter => "Step counter",
             Tool::Highlight => "Highlight",
             Tool::Obfuscate => "Obfuscate",
             Tool::Crop => "Crop",
@@ -86,6 +95,8 @@ impl Tool {
             Tool::Arrow => icon::ARROW_UP_RIGHT,
             Tool::Freehand => icon::PENCIL_SIMPLE,
             Tool::Text => icon::TEXT_T,
+            Tool::Speech => icon::CHAT_TEXT,
+            Tool::Counter => icon::NUMBER_CIRCLE_ONE,
             Tool::Highlight => icon::HIGHLIGHTER,
             Tool::Obfuscate => icon::CHECKERBOARD,
             Tool::Crop => icon::CROP,
@@ -102,6 +113,8 @@ impl Tool {
             Tool::Arrow => Key::A,
             Tool::Freehand => Key::F,
             Tool::Text => Key::T,
+            Tool::Speech => Key::S,
+            Tool::Counter => Key::I,
             Tool::Highlight => Key::H,
             Tool::Obfuscate => Key::O,
             Tool::Crop => Key::C,
@@ -157,6 +170,10 @@ pub struct Editor {
     dirty: bool,
     prop_editing: bool,
     status: String,
+    /// Settings remembered by the Effects menu.
+    border_width: u32,
+    border_color: Color32,
+    resize_percent: f32,
 }
 
 impl Editor {
@@ -179,6 +196,9 @@ impl Editor {
             dirty: false,
             prop_editing: false,
             status: String::new(),
+            border_width: 8,
+            border_color: Color32::WHITE,
+            resize_percent: 50.0,
         }
     }
 
@@ -269,6 +289,79 @@ impl Editor {
         }
     }
 
+    /// Add a new speech bubble (from a drag or a click) and start typing in it.
+    fn add_speech(&mut self, mut e: Element) {
+        let r = e.bounds();
+        if r.width() < 40.0 || r.height() < 30.0 {
+            e.a = r.min;
+            e.b = r.min + Vec2::new(200.0, 70.0);
+        }
+        if e.style.fill.a() == 0 {
+            e.style.fill = Color32::WHITE;
+        }
+        e.default_tail();
+        self.checkpoint();
+        self.doc.elements.push(e);
+        self.start_text_edit(self.doc.elements.len() - 1);
+        self.touched();
+    }
+
+    fn apply_effect(&mut self, effect: Effect) {
+        self.finish_text_edit();
+        self.crop_rect = None;
+        self.selected = None;
+        self.checkpoint();
+        self.doc.apply_effect(effect);
+        self.touched();
+    }
+
+    fn effects_menu(&mut self, ui: &mut Ui) {
+        if ui.button("Drop shadow").clicked() {
+            self.apply_effect(Effect::DropShadow { offset: 6, blur: 5.0 });
+            ui.close();
+        }
+        if ui.button("Torn edges").clicked() {
+            self.apply_effect(Effect::TornEdges { tooth: 10 });
+            ui.close();
+        }
+        ui.horizontal(|ui| {
+            if ui.button("Border").clicked() {
+                self.apply_effect(Effect::Border { width: self.border_width, color: self.border_color });
+                ui.close();
+            }
+            ui.add(egui::DragValue::new(&mut self.border_width).range(1..=200).suffix(" px"));
+            egui::color_picker::color_edit_button_srgba(ui, &mut self.border_color, egui::color_picker::Alpha::Opaque);
+        });
+        ui.separator();
+        if ui.button("Greyscale").clicked() {
+            self.apply_effect(Effect::Grayscale);
+            ui.close();
+        }
+        if ui.button("Invert colours").clicked() {
+            self.apply_effect(Effect::Invert);
+            ui.close();
+        }
+        ui.separator();
+        if ui.button("Rotate left").clicked() {
+            self.apply_effect(Effect::RotateCounterClockwise);
+            ui.close();
+        }
+        if ui.button("Rotate right").clicked() {
+            self.apply_effect(Effect::RotateClockwise);
+            ui.close();
+        }
+        ui.horizontal(|ui| {
+            if ui.button("Resize").clicked() {
+                self.apply_effect(Effect::Resize { scale: self.resize_percent / 100.0 });
+                ui.close();
+            }
+            ui.add(egui::DragValue::new(&mut self.resize_percent).range(5.0..=800.0).speed(1.0).suffix(" %"));
+            let (w, h) = self.image_size();
+            let f = self.resize_percent / 100.0;
+            ui.weak(format!("{} × {}", (w as f32 * f).round(), (h as f32 * f).round()));
+        });
+    }
+
     fn start_text_edit(&mut self, idx: usize) {
         self.editing_text = Some(idx);
         self.selected = Some(idx);
@@ -280,7 +373,7 @@ impl Editor {
 
     fn finish_text_edit(&mut self) {
         if let Some(i) = self.editing_text.take() {
-            if self.doc.elements.get(i).is_some_and(|e| e.text.trim().is_empty()) {
+            if self.doc.elements.get(i).is_some_and(|e| e.kind == Kind::Text && e.text.trim().is_empty()) {
                 self.doc.elements.remove(i);
                 self.selected = None;
             }
@@ -401,6 +494,9 @@ impl Editor {
             if icon_button(ui, icon::TRASH, self.selected.is_some(), "Delete selected (Delete)").clicked() {
                 self.delete_selected();
             }
+            ui.menu_button(egui::RichText::new(icon::MAGIC_WAND).size(ICON_SIZE), |ui| self.effects_menu(ui))
+                .response
+                .on_hover_text("Effects: shadow, torn edges, border, greyscale, rotate, resize");
             ui.separator();
             for tool in Tool::ALL {
                 let key = if tool == Tool::Select { "Esc".to_string() } else { format!("{:?}", tool.key()) };
@@ -443,8 +539,21 @@ impl Editor {
             };
             match kind {
                 Kind::Highlight => {
+                    ui.label("Style");
+                    for mode in HighlightMode::ALL {
+                        ui.selectable_value(&mut self.style.highlight_mode, mode, mode.label());
+                    }
+                    if self.style.highlight_mode == HighlightMode::Text {
+                        ui.label("Colour");
+                        egui::color_picker::color_edit_button_srgba(ui, &mut self.style.highlight, egui::color_picker::Alpha::Opaque);
+                    }
+                }
+                Kind::Counter => {
                     ui.label("Colour");
-                    egui::color_picker::color_edit_button_srgba(ui, &mut self.style.highlight, egui::color_picker::Alpha::Opaque);
+                    egui::color_picker::color_edit_button_srgba(ui, &mut self.style.stroke, egui::color_picker::Alpha::Opaque);
+                    ui.label("Size");
+                    ui.add(egui::DragValue::new(&mut self.style.font_size).range(8.0..=120.0).speed(0.5));
+                    ui.checkbox(&mut self.style.shadow, "Shadow");
                 }
                 Kind::Obfuscate => {
                     ui.label("Mode");
@@ -454,12 +563,17 @@ impl Editor {
                     ui.add(egui::Slider::new(&mut self.style.strength, 2.0..=50.0).integer());
                 }
                 _ => {
-                    ui.label(if kind == Kind::Text { "Text colour" } else { "Line colour" });
+                    ui.label(match kind {
+                        Kind::Text => "Text colour",
+                        Kind::Speech => "Line and text colour",
+                        _ => "Line colour",
+                    });
                     egui::color_picker::color_edit_button_srgba(ui, &mut self.style.stroke, egui::color_picker::Alpha::BlendOrAdditive);
-                    if kind == Kind::Text {
-                        ui.label("Size");
+                    if kind.has_text() {
+                        ui.label("Text size");
                         ui.add(egui::DragValue::new(&mut self.style.font_size).range(6.0..=200.0).speed(0.5));
-                    } else {
+                    }
+                    if kind != Kind::Text {
                         ui.label("Thickness");
                         ui.add(egui::DragValue::new(&mut self.style.width).range(0.0..=40.0).speed(0.2));
                     }
@@ -469,6 +583,9 @@ impl Editor {
                         if self.style.fill.a() > 0 && ui.small_button("No fill").clicked() {
                             self.style.fill = Color32::TRANSPARENT;
                         }
+                    }
+                    if kind.has_shadow() {
+                        ui.checkbox(&mut self.style.shadow, "Shadow");
                     }
                 }
             }
@@ -530,11 +647,9 @@ impl Editor {
 
     fn canvas(&mut self, ui: &mut Ui) {
         self.update_texture(ui);
-        // Keep text boxes sized to their content.
+        // Keep text boxes, counters and speech bubbles sized to their content.
         for e in &mut self.doc.elements {
-            if e.kind == Kind::Text {
-                e.b = e.a + measure_text(&e.text, e.style.font_size);
-            }
+            e.fit_content();
         }
 
         let ppp = ui.ctx().pixels_per_point();
@@ -565,12 +680,15 @@ impl Editor {
 
             let painter = painter.with_clip_rect(image_rect.intersect(resp.rect));
             for (i, e) in self.doc.elements.iter().enumerate() {
-                if self.editing_text != Some(i) {
-                    paint_element(&painter, e, view, false);
+                let number = (e.kind == Kind::Counter).then(|| self.doc.counter_number(i));
+                let editing = self.editing_text == Some(i);
+                if e.kind == Kind::Text && editing {
+                    continue;
                 }
+                paint_element(&painter, e, view, Paint { number, drafting: false, show_text: !editing });
             }
             if let Drag::Create(e) = &self.drag {
-                paint_element(&painter, e, view, true);
+                paint_element(&painter, e, view, Paint { number: None, drafting: true, show_text: true });
             }
             let painter = painter.with_clip_rect(resp.rect);
             if let Some(e) = self.selected.and_then(|i| self.doc.elements.get(i)) {
@@ -602,7 +720,7 @@ impl Editor {
                     self.crop_rect = None;
                     Drag::Crop { start: p }
                 }
-                Tool::Text => Drag::None,
+                Tool::Text | Tool::Counter => Drag::None,
                 tool => {
                     let mut e = Element::new(tool.kind().unwrap(), p, self.style);
                     if e.kind == Kind::Freehand {
@@ -652,7 +770,9 @@ impl Editor {
                     if let Some(last) = e.points.last() {
                         e.b = *last;
                     }
-                    if !e.is_degenerate() {
+                    if e.kind == Kind::Speech {
+                        self.add_speech(e);
+                    } else if !e.is_degenerate() {
                         self.checkpoint();
                         self.doc.elements.push(e);
                         self.selected = Some(self.doc.elements.len() - 1);
@@ -680,8 +800,25 @@ impl Editor {
                         self.style = e.style;
                     }
                 }
+                Tool::Speech => match self.doc.hit(p, tol).filter(|&i| self.doc.elements[i].kind == Kind::Speech) {
+                    Some(i) => {
+                        self.checkpoint();
+                        self.start_text_edit(i);
+                    }
+                    None => {
+                        let mut e = Element::new(Kind::Speech, p, self.style);
+                        e.b = p + Vec2::new(200.0, 70.0);
+                        self.add_speech(e);
+                    }
+                },
+                Tool::Counter => {
+                    self.checkpoint();
+                    self.doc.elements.push(Element::counter(p, self.style));
+                    self.selected = Some(self.doc.elements.len() - 1);
+                    self.touched();
+                }
                 Tool::Text => {
-                    let existing = self.doc.hit(p, tol).filter(|&i| self.doc.elements[i].kind == Kind::Text);
+                    let existing = self.doc.hit(p, tol).filter(|&i| self.doc.elements[i].kind.has_text());
                     if let Some(i) = existing {
                         self.checkpoint();
                         self.start_text_edit(i);
@@ -698,7 +835,7 @@ impl Editor {
         if resp.double_clicked() && self.tool == Tool::Select
             && let Some(pos) = resp.interact_pointer_pos() {
                 let p = view.to_image(pos);
-                if let Some(i) = self.doc.hit(p, tol).filter(|&i| self.doc.elements[i].kind == Kind::Text) {
+                if let Some(i) = self.doc.hit(p, tol).filter(|&i| self.doc.elements[i].kind.has_text()) {
                     self.checkpoint();
                     self.start_text_edit(i);
                 }
@@ -733,8 +870,9 @@ impl Editor {
             return;
         };
         let size = measure_text(&e.text, e.style.font_size).max(Vec2::new(e.style.font_size * 4.0, e.style.font_size * 1.3));
-        let rect = Rect::from_min_size(view.to_screen(e.a), size * view.scale + Vec2::new(40.0, 4.0));
-        if e.style.fill.a() > 0 {
+        let origin = if e.kind == Kind::Speech { e.bounds().min + Vec2::splat(SPEECH_PADDING) } else { e.a };
+        let rect = Rect::from_min_size(view.to_screen(origin), size * view.scale + Vec2::new(40.0, 4.0));
+        if e.kind == Kind::Text && e.style.fill.a() > 0 {
             ui.painter().rect_filled(view.rect(e.bounds().expand(TEXT_PADDING)), 0.0, e.style.fill);
         }
         ui.painter().rect_stroke(rect.expand(2.0), 2.0, Stroke::new(1.0, Color32::from_rgb(0, 120, 215)), StrokeKind::Outside);
@@ -788,17 +926,44 @@ fn constrain(kind: Kind, a: Pos2, p: Pos2) -> Pos2 {
     }
 }
 
-fn paint_element(painter: &egui::Painter, e: &Element, view: View, drafting: bool) {
+/// Per-element painting options for the canvas preview.
+#[derive(Clone, Copy)]
+struct Paint {
+    /// Step-counter number.
+    number: Option<usize>,
+    /// Being drawn right now (raster elements show a preview box).
+    drafting: bool,
+    /// False while the element's text is being edited in place.
+    show_text: bool,
+}
+
+const PREVIEW_SHADOW: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 70);
+
+fn paint_element(painter: &egui::Painter, e: &Element, view: View, opts: Paint) {
+    if e.style.shadow && e.kind.has_shadow() {
+        // A quick offset silhouette; the saved image gets a soft blurred one.
+        let shadow_view = View { origin: view.origin + Vec2::splat(4.0 * view.scale), scale: view.scale };
+        paint_shapes(painter, e, shadow_view, opts, Some(PREVIEW_SHADOW));
+    }
+    paint_shapes(painter, e, view, opts, None);
+}
+
+/// Draw an element, or its silhouette in `mono` if given.
+fn paint_shapes(painter: &egui::Painter, e: &Element, view: View, opts: Paint, mono: Option<Color32>) {
     let s = &e.style;
-    let stroke = Stroke::new(s.width * view.scale, s.stroke);
+    let col = |c: Color32| match mono {
+        Some(m) if c.a() > 0 => m,
+        _ => c,
+    };
+    let stroke = Stroke::new(s.width * view.scale, col(s.stroke));
     match e.kind {
         Kind::Rect => {
-            painter.rect(view.rect(e.bounds()), 0.0, s.fill, stroke, StrokeKind::Middle);
+            painter.rect(view.rect(e.bounds()), 0.0, col(s.fill), stroke, StrokeKind::Middle);
         }
         Kind::Ellipse => {
             let r = view.rect(e.bounds());
             if s.fill.a() > 0 {
-                painter.add(Shape::ellipse_filled(r.center(), r.size() / 2.0, s.fill));
+                painter.add(Shape::ellipse_filled(r.center(), r.size() / 2.0, col(s.fill)));
             }
             painter.add(Shape::ellipse_stroke(r.center(), r.size() / 2.0, stroke));
         }
@@ -808,23 +973,64 @@ fn paint_element(painter: &egui::Painter, e: &Element, view: View, drafting: boo
         Kind::Arrow => {
             let (head, shaft_end) = arrow_head(e.a, e.b, s.width);
             painter.line_segment([view.to_screen(e.a), view.to_screen(shaft_end)], stroke);
-            painter.add(Shape::convex_polygon(head.iter().map(|p| view.to_screen(*p)).collect(), s.stroke, Stroke::NONE));
+            painter.add(Shape::convex_polygon(head.iter().map(|p| view.to_screen(*p)).collect(), col(s.stroke), Stroke::NONE));
         }
         Kind::Freehand => {
             painter.add(Shape::line(e.points.iter().map(|p| view.to_screen(*p)).collect(), stroke));
         }
         Kind::Text => {
             if s.fill.a() > 0 {
-                painter.rect_filled(view.rect(e.bounds().expand(TEXT_PADDING)), 0.0, s.fill);
+                painter.rect_filled(view.rect(e.bounds().expand(TEXT_PADDING)), 0.0, col(s.fill));
             }
-            painter.text(view.to_screen(e.a), Align2::LEFT_TOP, &e.text, FontId::proportional(s.font_size * view.scale), s.stroke);
+            if opts.show_text {
+                painter.text(view.to_screen(e.a), Align2::LEFT_TOP, &e.text, FontId::proportional(s.font_size * view.scale), col(s.stroke));
+            }
+        }
+        Kind::Speech => {
+            let r = e.bounds();
+            let screen = view.rect(r);
+            let radius = egui::CornerRadius::same((speech_radius(r) * view.scale).clamp(0.0, 255.0) as u8);
+            let base = speech_tail_base(r, e.tail);
+            let tail: Vec<Pos2> = [base[0], e.tail, base[1]].iter().map(|p| view.to_screen(*p)).collect();
+            let has_tail = base[0] != base[1];
+            if s.fill.a() > 0 {
+                // Same trick as the exporter: double-width outline, then fill over it.
+                let thick = Stroke::new(s.width * 2.0 * view.scale, col(s.stroke));
+                if s.width > 0.0 {
+                    painter.rect_stroke(screen, radius, thick, StrokeKind::Middle);
+                    if has_tail {
+                        painter.add(Shape::closed_line(tail.clone(), thick));
+                    }
+                }
+                painter.rect_filled(screen, radius, col(s.fill));
+                if has_tail {
+                    painter.add(Shape::convex_polygon(tail, col(s.fill), Stroke::NONE));
+                }
+            } else {
+                painter.rect_stroke(screen, radius, stroke, StrokeKind::Middle);
+                if has_tail {
+                    painter.add(Shape::closed_line(tail, stroke));
+                }
+            }
+            if opts.show_text && mono.is_none() {
+                let origin = view.to_screen(r.min + Vec2::splat(SPEECH_PADDING));
+                painter.text(origin, Align2::LEFT_TOP, &e.text, FontId::proportional(s.font_size * view.scale), s.stroke);
+            }
+        }
+        Kind::Counter => {
+            let r = view.rect(e.bounds());
+            painter.circle_filled(r.center(), r.width() / 2.0, col(s.stroke));
+            if mono.is_none() {
+                let label = opts.number.unwrap_or(1).to_string();
+                painter.text(r.center(), Align2::CENTER_CENTER, label, FontId::proportional(s.font_size * view.scale), contrasting_text(s.stroke));
+            }
         }
         Kind::Highlight | Kind::Obfuscate => {
             // The effect itself is baked into the canvas texture once the
             // element is committed; while drawing, show a preview box.
-            if drafting {
+            if opts.drafting && mono.is_none() {
                 let r = view.rect(e.bounds());
-                let fill = if e.kind == Kind::Highlight {
+                let fill = if e.kind == Kind::Highlight && s.highlight_mode == HighlightMode::Text {
                     s.highlight.gamma_multiply(0.45)
                 } else {
                     Color32::from_black_alpha(90)

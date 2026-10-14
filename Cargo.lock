@@ -4421,13 +4421,14 @@ dependencies = [
 
 [[package]]
 name = "rustshot-app"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "block2 0.6.2",
  "chrono",
  "eframe",
  "egui",
+ "egui-phosphor",
  "env_logger",
  "global-hotkey",
  "log",
@@ -4443,7 +4444,7 @@ dependencies = [
 
 [[package]]
 name = "rustshot-core"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "arboard",
@@ -4452,13 +4453,16 @@ dependencies = [
  "image",
  "log",
  "serde",
+ "tiny-skia 0.12.0",
  "toml 1.1.8+spec-1.1.0",
+ "windows-sys 0.61.2",
+ "x11rb",
  "xcap",
 ]
 
 [[package]]
 name = "rustshot-editor"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "ab_glyph",
  "egui",
@@ -6230,7 +6234,7 @@ checksum = "e450f9b2ed1dff33c94c12589a87338689467b9c4f5d8a5710bd09a847d2c8a7"
 
 [[package]]
 name = "xtask"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "image",

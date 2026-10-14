@@ -18,14 +18,25 @@ pub fn save_image(img: &RgbaImage, path: &Path, format: OutputFormat, jpeg_quali
     match format {
         OutputFormat::Png => DynamicImage::ImageRgba8(img.clone()).write_to(&mut w, image::ImageFormat::Png)?,
         OutputFormat::Jpg => {
-            let rgb = DynamicImage::ImageRgba8(img.clone()).to_rgb8();
+            let rgb = on_white(img);
             image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, jpeg_quality.clamp(1, 100))
                 .encode_image(&rgb)?;
         }
-        OutputFormat::Bmp => DynamicImage::ImageRgba8(img.clone()).to_rgb8().write_to(&mut w, image::ImageFormat::Bmp)?,
+        OutputFormat::Bmp => on_white(img).write_to(&mut w, image::ImageFormat::Bmp)?,
         OutputFormat::Gif => DynamicImage::ImageRgba8(img.clone()).write_to(&mut w, image::ImageFormat::Gif)?,
     }
     Ok(())
+}
+
+/// Formats without transparency: put transparent areas (from effects such
+/// as drop shadow or torn edges) on white instead of letting them turn black.
+fn on_white(img: &RgbaImage) -> image::RgbImage {
+    image::RgbImage::from_fn(img.width(), img.height(), |x, y| {
+        let [r, g, b, a] = img.get_pixel(x, y).0;
+        let a = a as u16;
+        let blend = |c: u8| ((c as u16 * a + 255 * (255 - a) + 127) / 255) as u8;
+        image::Rgb([blend(r), blend(g), blend(b)])
+    })
 }
 
 /// Path for "Save directly": output folder + expanded pattern + extension,
@@ -98,6 +109,14 @@ mod tests {
         std::fs::write(&first, b"x").unwrap();
         assert_eq!(unique_path(&dir, "a", "png"), dir.join("a (1).png"));
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn transparent_pixels_become_white_in_jpg() {
+        let img = RgbaImage::from_pixel(2, 2, image::Rgba([0, 0, 0, 0]));
+        assert_eq!(on_white(&img).get_pixel(0, 0).0, [255, 255, 255]);
+        let half = RgbaImage::from_pixel(1, 1, image::Rgba([0, 0, 0, 128]));
+        assert_eq!(on_white(&half).get_pixel(0, 0).0, [127, 127, 127]);
     }
 
     #[test]

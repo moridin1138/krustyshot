@@ -2,7 +2,7 @@
 
 use rustshot_core::config::Hotkeys;
 use rustshot_core::filename::{self, PatternContext};
-use rustshot_core::{Config, Destination, OutputFormat};
+use rustshot_core::{Config, Destination, OutputFormat, TrayClick};
 
 use crate::hotkeys;
 
@@ -25,7 +25,7 @@ impl SettingsWindow {
         let id = egui::ViewportId::from_hash_of("rustshot-settings");
         let builder = egui::ViewportBuilder::default()
             .with_title("Rustshot Preferences")
-            .with_inner_size([560.0, 600.0])
+            .with_inner_size([560.0, 720.0])
             .with_min_inner_size([460.0, 420.0]);
         let action = ctx.show_viewport_immediate(id, builder, |ui, _| {
             if ui.input(|i| i.viewport().close_requested()) {
@@ -118,7 +118,35 @@ impl SettingsWindow {
                 }
             }
         });
+
+        ui.add_space(12.0);
+        ui.heading("Capture");
         ui.checkbox(&mut d.show_magnifier, "Show magnifier while selecting");
+        ui.checkbox(&mut d.capture_pointer, "Include the mouse pointer");
+        ui.horizontal(|ui| {
+            ui.label("Wait before capturing");
+            ui.add(egui::DragValue::new(&mut d.capture_delay_secs).range(0..=30).suffix(" s"));
+            if d.capture_delay_secs > 0 {
+                ui.weak("(time to open a menu or hover something)");
+            }
+        });
+
+        ui.add_space(12.0);
+        ui.heading("Menu-bar icon and notifications");
+        ui.horizontal(|ui| {
+            ui.label("Clicking the icon");
+            egui::ComboBox::from_id_salt("tray_click")
+                .selected_text(d.tray_click.label())
+                .show_ui(ui, |ui| {
+                    for c in TrayClick::ALL {
+                        ui.selectable_value(&mut d.tray_click, c, c.label());
+                    }
+                });
+        });
+        if d.tray_click != TrayClick::ShowMenu {
+            ui.weak("Right-click the icon for the menu.");
+        }
+        ui.checkbox(&mut d.notifications, "Show a notification after saving or copying");
 
         ui.add_space(12.0);
         ui.heading("Output");

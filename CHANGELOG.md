@@ -6,6 +6,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-14
+
+Phase 2: Greenshot editor parity.
+
+### Added
+
+- Speech bubbles (`S`): a rounded box with text and a tail you can drag to point at anything.
+- Step counters (`I`): numbered circles that renumber themselves when one is deleted.
+- Highlight styles: marker (as before), spotlight (darken everything else), grey out the rest, and magnify.
+- Soft drop shadows on shapes, on by default and switchable per annotation.
+- Effects menu in the editor: drop shadow, torn edges, border, greyscale, invert colours, rotate left and right, and resize. Annotations move, rotate and scale with the image.
+- Region captures can span several displays; the result keeps the sharpest display's resolution.
+- Option to include the mouse pointer in captures.
+- Capture delay of up to 30 seconds.
+- A small notification after saving or copying; click it to show the file in Finder or Explorer.
+- Choose what a left click on the menu-bar icon does: open the menu, or start a capture (right click then opens the menu).
+
+### Changed
+
+- Full-screen captures of several displays are assembled the same way as spanning regions.
+- JPG and BMP files put transparent areas (from drop shadow or torn edges) on white instead of black.
+
 ## [0.1.1] - 2026-10-13
 
 ### Fixed
@@ -42,6 +64,7 @@ First release, licensed under GPL-3.0-or-later.
 - App icon, `cargo xtask icons` to regenerate it, and macOS bundle metadata.
 - CI on macOS, Windows and Linux, and a tag-driven release workflow.
 
-[Unreleased]: https://github.com/moridin1138/rustshot/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/moridin1138/rustshot/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/moridin1138/rustshot/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/moridin1138/rustshot/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/moridin1138/rustshot/releases/tag/v0.1.0

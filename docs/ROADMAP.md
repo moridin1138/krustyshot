@@ -4,19 +4,11 @@ Rustshot aims for feature parity with Greenshot on every desktop platform. Work 
 
 ## Phase 1: core capture and editing
 
-Done, unreleased. See [CHANGELOG.md](../CHANGELOG.md).
+Released in 0.1.0 and 0.1.1.
 
 ## Phase 2: Greenshot editor parity
 
-- Speech bubbles and step counters
-- Highlight modes: text, grayscale, magnify
-- Drop shadows on shapes
-- Image effects: drop shadow, torn edges, border, grayscale, invert, rotate, resize
-- Include the mouse pointer in captures
-- Capture delay
-- Notifications after saving or copying
-- Configurable tray click (for example, click captures a region, right-click shows the menu)
-- Regions that span several monitors
+Done, to be released as 0.2.0: speech bubbles, step counters, highlight modes, drop shadows, image effects, the mouse pointer in captures, capture delay, notifications, a configurable tray click, and regions spanning several displays. See [CHANGELOG.md](../CHANGELOG.md).
 
 ## Phase 3: more destinations
 

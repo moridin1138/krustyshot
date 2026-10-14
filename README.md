@@ -6,16 +6,18 @@ A cross-platform screenshot tool modelled on [Greenshot](https://getgreenshot.or
 
 ## Features
 
-- Menu-bar / tray icon with a capture menu
+- Menu-bar / tray icon with a capture menu; optionally make a left click start a capture
 - Global hotkeys for region, window, full screen and last region captures
 - Frozen-screen region selection with crosshair, magnifier and a pixel-size readout
 - Window capture: hover to highlight, click to capture (Space switches between region and window mode, like Greenshot)
-- Full-screen capture of all monitors, stitched together
-- Capture last region
+- Regions that span several displays, and full-screen capture of all displays
+- Capture last region, capture delay, and optionally the mouse pointer
 - Destination picker after each capture: open in editor, copy, save directly, save as
-- Image editor with Phosphor icons: select, move and resize, rectangle, ellipse, line, arrow, freehand, text, highlight, obfuscate (pixelate or blur), crop, undo and redo, line colour, thickness and fill
+- Image editor with Phosphor icons: select, move and resize, rectangle, ellipse, line, arrow, freehand, text, speech bubble, step counter, highlight (marker, spotlight, grey out the rest, magnify), obfuscate (pixelate or blur), crop, drop shadows, undo and redo
+- Effects: drop shadow, torn edges, border, greyscale, invert, rotate, resize
+- Notifications after saving or copying (click to show the file)
 - Open an image from the clipboard or from a file
-- Preferences: hotkeys, destinations, output folder, Greenshot-style filename pattern, PNG/JPG/BMP/GIF, JPEG quality
+- Preferences: hotkeys, destinations, capture options, output folder, Greenshot-style filename pattern, PNG/JPG/BMP/GIF, JPEG quality
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed in each version and [docs/ROADMAP.md](docs/ROADMAP.md) for what's planned.
 
@@ -34,7 +36,7 @@ Change them in Preferences. macOS keeps ⌘⇧3/4/5 for its own screenshot tool.
 
 | Key | Action |
 |---|---|
-| `R` `E` `L` `A` `F` `T` `H` `O` `C` | Rectangle, ellipse, line, arrow, freehand, text, highlight, obfuscate, crop |
+| `R` `E` `L` `A` `F` `T` `S` `I` `H` `O` `C` | Rectangle, ellipse, line, arrow, freehand, text, speech bubble, step counter, highlight, obfuscate, crop |
 | `Esc` | Select tool (or cancel crop / clear selection) |
 | Shift while drawing | Squares and circles; lines snap to 45° |
 | Delete | Remove the selected annotation |
@@ -85,6 +87,7 @@ The bundle is written to `target/release/bundle/Rustshot.app` and runs as a menu
 | `cargo clippy --all-targets -- -D warnings` | Lint (CI fails on any warning) |
 | `cargo xtask icons` | Regenerate the app icons in `assets/icons/` |
 | `scripts/bundle-macos.sh` | Package a release build as `Rustshot.app` (macOS) |
+| `cargo run -p rustshot-editor --example sample -- out.png` | Render every annotation type into a sample image, to check how they look |
 
 ## Project documents
 

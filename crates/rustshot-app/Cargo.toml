@@ -10,12 +10,13 @@ anyhow = "1.0.104"
 chrono = "0.4.45"
 eframe = "0.36.2"
 egui = "0.36.2"
+egui-phosphor = "0.14"
 env_logger = "0.11.11"
 global-hotkey = "0.8.0"
 log = "0.4.34"
 rfd = "0.17.2"
-rustshot-core = { version = "0.1.0", path = "../rustshot-core" }
-rustshot-editor = { version = "0.1.0", path = "../rustshot-editor" }
+rustshot-core = { path = "../rustshot-core" }
+rustshot-editor = { path = "../rustshot-editor" }
 tray-icon = "0.26.1"
 winit = "0.30"
 

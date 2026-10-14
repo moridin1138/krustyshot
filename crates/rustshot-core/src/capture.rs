@@ -45,6 +45,8 @@ pub struct Snapshot {
     pub monitors: Vec<MonitorShot>,
     /// Windows ordered front to back.
     pub windows: Vec<WindowInfo>,
+    /// Pointer position (global logical coordinates) when the snapshot was taken.
+    pub pointer: Option<(f64, f64)>,
     pub taken_at: chrono::DateTime<chrono::Local>,
 }
 
@@ -89,8 +91,17 @@ fn platform_scale(monitor: &xcap::Monitor) -> f64 {
     }
 }
 
-/// Grab all monitors and, optionally, the window list.
-pub fn take_snapshot(with_windows: bool) -> Result<Snapshot> {
+/// What to include in a snapshot besides the monitor images.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct SnapshotOptions {
+    /// List visible windows (needed for window capture and highlighting).
+    pub windows: bool,
+    /// Draw the mouse pointer into the captured images.
+    pub pointer: bool,
+}
+
+/// Grab all monitors and, optionally, the window list and mouse pointer.
+pub fn take_snapshot(opts: SnapshotOptions) -> Result<Snapshot> {
     let taken_at = chrono::Local::now();
     let monitors = xcap::Monitor::all().context("listing monitors")?;
 
@@ -123,8 +134,19 @@ pub fn take_snapshot(with_windows: bool) -> Result<Snapshot> {
         });
     }
 
-    let windows = if with_windows { list_windows(&raw) } else { Vec::new() };
-    Ok(Snapshot { monitors: shots, windows, taken_at })
+    let pointer = crate::pointer::raw_position().map(|(x, y)| to_logical(&raw, x, y));
+    if opts.pointer
+        && let Some((px, py)) = pointer
+        && let Some(m) = shots.iter_mut().find(|m| m.rect.contains(px, py))
+    {
+        let scale = m.scale();
+        let x = ((px - m.rect.x) * scale) as f32;
+        let y = ((py - m.rect.y) * scale) as f32;
+        crate::pointer::draw(&mut m.image, x, y, scale as f32);
+    }
+
+    let windows = if opts.windows { list_windows(&raw) } else { Vec::new() };
+    Ok(Snapshot { monitors: shots, windows, pointer, taken_at })
 }
 
 fn list_windows(raw: &[RawMonitor]) -> Vec<WindowInfo> {
@@ -175,16 +197,20 @@ impl Snapshot {
         self.windows.iter().find(|w| w.rect.contains(x, y))
     }
 
-    /// Crop a global region out of the frozen screen. Regions spanning
-    /// several monitors are clipped to the monitor they overlap most.
+    /// Crop a global region out of the frozen screen. A region spanning
+    /// several monitors is assembled from all of them (see [`compose`]).
     pub fn crop(&self, region: &Region) -> Option<RgbaImage> {
-        let m = self.monitor_for(region)?;
-        crop_monitor(m, region)
+        compose(&self.monitors, region)
+    }
+
+    /// Bounds of the whole desktop.
+    pub fn desktop(&self) -> Option<Region> {
+        desktop_bounds(&self.monitors)
     }
 
     /// All monitors stitched into one image at the highest pixel density.
     pub fn stitch_all(&self) -> Option<RgbaImage> {
-        stitch(&self.monitors)
+        compose(&self.monitors, &self.desktop()?)
     }
 }
 
@@ -199,32 +225,55 @@ pub fn crop_monitor(m: &MonitorShot, region: &Region) -> Option<RgbaImage> {
     (w > 0 && h > 0).then(|| imageops::crop_imm(&m.image, x, y, w, h).to_image())
 }
 
-fn stitch(monitors: &[MonitorShot]) -> Option<RgbaImage> {
-    let first = monitors.first()?;
-    if monitors.len() == 1 {
-        return Some(first.image.clone());
-    }
-    let scale = monitors.iter().map(|m| m.scale()).fold(1.0, f64::max);
+fn desktop_bounds(monitors: &[MonitorShot]) -> Option<Region> {
+    monitors.first()?;
     let min_x = monitors.iter().map(|m| m.rect.x).fold(f64::MAX, f64::min);
     let min_y = monitors.iter().map(|m| m.rect.y).fold(f64::MAX, f64::min);
     let max_x = monitors.iter().map(|m| m.rect.right()).fold(f64::MIN, f64::max);
     let max_y = monitors.iter().map(|m| m.rect.bottom()).fold(f64::MIN, f64::max);
-    let w = ((max_x - min_x) * scale).round() as u32;
-    let h = ((max_y - min_y) * scale).round() as u32;
-    let mut canvas = RgbaImage::new(w, h);
-    for m in monitors {
-        let tw = (m.rect.w * scale).round() as u32;
-        let th = (m.rect.h * scale).round() as u32;
-        let ox = ((m.rect.x - min_x) * scale).round() as i64;
-        let oy = ((m.rect.y - min_y) * scale).round() as i64;
-        if tw == m.image.width() && th == m.image.height() {
-            imageops::overlay(&mut canvas, &m.image, ox, oy);
-        } else {
-            let resized = imageops::resize(&m.image, tw, th, imageops::FilterType::Triangle);
-            imageops::overlay(&mut canvas, &resized, ox, oy);
+    Some(Region::new(min_x, min_y, max_x - min_x, max_y - min_y))
+}
+
+/// Assemble the pixels of a global region from every monitor it touches.
+///
+/// The result uses the highest pixel density among those monitors, so a
+/// region spanning a Retina and a standard display keeps Retina sharpness
+/// (the standard display's part is scaled up). Parts of the region not on
+/// any monitor stay transparent.
+pub fn compose(monitors: &[MonitorShot], region: &Region) -> Option<RgbaImage> {
+    let parts: Vec<(&MonitorShot, Region)> =
+        monitors.iter().filter_map(|m| m.rect.intersect(region).map(|r| (m, r))).collect();
+    match parts.as_slice() {
+        [] => None,
+        [(m, _)] => crop_monitor(m, region),
+        _ => {
+            let region = parts.iter().skip(1).fold(parts[0].1, |acc, (_, r)| union(&acc, r));
+            let scale = parts.iter().map(|(m, _)| m.scale()).fold(1.0, f64::max);
+            let w = (region.w * scale).round() as u32;
+            let h = (region.h * scale).round() as u32;
+            let mut canvas = RgbaImage::new(w, h);
+            for (m, part) in &parts {
+                let Some(piece) = crop_monitor(m, part) else { continue };
+                let tw = (part.w * scale).round() as u32;
+                let th = (part.h * scale).round() as u32;
+                let piece = if (tw, th) == piece.dimensions() {
+                    piece
+                } else {
+                    imageops::resize(&piece, tw.max(1), th.max(1), imageops::FilterType::Triangle)
+                };
+                let ox = ((part.x - region.x) * scale).round() as i64;
+                let oy = ((part.y - region.y) * scale).round() as i64;
+                imageops::replace(&mut canvas, &piece, ox, oy);
+            }
+            Some(canvas)
         }
     }
-    Some(canvas)
+}
+
+fn union(a: &Region, b: &Region) -> Region {
+    let x = a.x.min(b.x);
+    let y = a.y.min(b.y);
+    Region::new(x, y, a.right().max(b.right()) - x, a.bottom().max(b.bottom()) - y)
 }
 
 #[cfg(test)]
@@ -256,9 +305,41 @@ mod tests {
         assert!(crop_monitor(&m, &Region::new(0.0, 0.0, 50.0, 50.0)).is_none());
     }
 
+    fn filled(x: f64, w: f64, scale: u32, value: u8) -> MonitorShot {
+        let mut m = shot(x, w, scale);
+        m.image = RgbaImage::from_pixel(w as u32 * scale, 100 * scale, image::Rgba([value, value, value, 255]));
+        m
+    }
+
     #[test]
     fn stitch_mixed_dpi() {
-        let img = stitch(&[shot(0.0, 100.0, 2), shot(100.0, 100.0, 1)]).unwrap();
+        let mons = [shot(0.0, 100.0, 2), shot(100.0, 100.0, 1)];
+        let img = compose(&mons, &desktop_bounds(&mons).unwrap()).unwrap();
         assert_eq!((img.width(), img.height()), (400, 200));
+    }
+
+    #[test]
+    fn region_spanning_two_monitors() {
+        // Retina (scale 2) on the left, standard on the right.
+        let mons = [filled(0.0, 100.0, 2, 10), filled(100.0, 100.0, 1, 200)];
+        let img = compose(&mons, &Region::new(80.0, 10.0, 40.0, 20.0)).unwrap();
+        // 40x20 points at the highest density (2x).
+        assert_eq!(img.dimensions(), (80, 40));
+        // Left half from the Retina monitor, right half from the other.
+        assert_eq!(img.get_pixel(10, 10).0[0], 10);
+        assert_eq!(img.get_pixel(70, 10).0[0], 200);
+    }
+
+    #[test]
+    fn region_with_gap_outside_monitors() {
+        // Monitors of different heights: the area below the short one is transparent.
+        let mut tall = filled(100.0, 100.0, 1, 50);
+        tall.rect.h = 200.0;
+        tall.image = RgbaImage::from_pixel(100, 200, image::Rgba([50, 50, 50, 255]));
+        let mons = [filled(0.0, 100.0, 1, 10), tall];
+        let img = compose(&mons, &Region::new(50.0, 50.0, 100.0, 100.0)).unwrap();
+        assert_eq!(img.dimensions(), (100, 100));
+        assert_eq!(img.get_pixel(10, 90).0[3], 0, "below the short monitor stays transparent");
+        assert_eq!(img.get_pixel(90, 90).0[0], 50);
     }
 }

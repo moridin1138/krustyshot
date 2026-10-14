@@ -6,9 +6,10 @@ use std::time::{Duration, Instant};
 
 use chrono::{DateTime, Local};
 use global_hotkey::{GlobalHotKeyEvent, HotKeyState};
-use rustshot_core::{capture, output, permissions, Config, Destination, RgbaImage};
+use rustshot_core::{capture, output, permissions, Config, Destination, RgbaImage, TrayClick};
 use rustshot_editor::{Editor, EditorRequest};
 use tray_icon::menu::MenuEvent;
+use tray_icon::{MouseButton, MouseButtonState, TrayIconEvent};
 
 use crate::hotkeys::HotkeyRegistry;
 use crate::overlay::{Outcome, Overlay};
@@ -38,6 +39,18 @@ impl CaptureMode {
 enum AppEvent {
     Menu(String),
     Hotkey(u32),
+    /// Left click on the tray icon (only sent when it doesn't open the menu).
+    TrayClick,
+}
+
+/// A short-lived message near the corner of the screen ("Saved", "Copied").
+struct Toast {
+    id: egui::ViewportId,
+    message: String,
+    /// The saved file; clicking the toast shows it in Finder / Explorer.
+    path: Option<PathBuf>,
+    until: Instant,
+    shown: bool,
 }
 
 /// A finished capture waiting to be sent somewhere.
@@ -81,6 +94,7 @@ pub struct App {
     background_hidden: bool,
     /// Debug builds only: next step of the RUSTSHOT_STRESS window test.
     stress: Option<(Instant, u64)>,
+    toast: Option<Toast>,
 }
 
 impl App {
@@ -97,6 +111,15 @@ impl App {
             MenuEvent::set_event_handler(Some(move |e: MenuEvent| {
                 let _ = tx.send(AppEvent::Menu(e.id.0));
                 ctx.request_repaint();
+            }));
+        }
+        {
+            let (tx, ctx) = (tx.clone(), ctx.clone());
+            TrayIconEvent::set_event_handler(Some(move |e: TrayIconEvent| {
+                if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = e {
+                    let _ = tx.send(AppEvent::TrayClick);
+                    ctx.request_repaint();
+                }
             }));
         }
         {
@@ -134,6 +157,7 @@ impl App {
             background_hidden: false,
             stress: (cfg!(debug_assertions) && std::env::var_os("RUSTSHOT_STRESS").is_some())
                 .then(|| (Instant::now() + Duration::from_secs(2), 0)),
+            toast: None,
         };
 
         // Let macOS show its own permission prompt once (this also adds Rustshot
@@ -191,6 +215,77 @@ impl App {
         ctx.request_repaint();
     }
 
+    fn notify_saved(&mut self, path: PathBuf) {
+        let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        self.notify(&format!("Saved {name}"), Some(path));
+    }
+
+    /// Show a brief toast, if notifications are on.
+    fn notify(&mut self, message: &str, path: Option<PathBuf>) {
+        if !self.config.notifications {
+            return;
+        }
+        self.next_id += 1;
+        self.toast = Some(Toast {
+            id: egui::ViewportId::from_hash_of(("rustshot-toast", self.next_id)),
+            message: message.into(),
+            path,
+            until: Instant::now() + Duration::from_millis(2800),
+            shown: false,
+        });
+    }
+
+    fn show_toast(&mut self, ctx: &egui::Context) {
+        let Some(toast) = &mut self.toast else { return };
+        let now = Instant::now();
+        if now >= toast.until {
+            self.toast = None;
+            return;
+        }
+        ctx.request_repaint_after(toast.until - now);
+        const SIZE: egui::Vec2 = egui::vec2(320.0, 64.0);
+        let monitor = ctx.input(|i| i.viewport().monitor_size).unwrap_or(egui::vec2(1440.0, 900.0));
+        // Top right on macOS (where notifications appear), bottom right elsewhere.
+        let y = if cfg!(target_os = "macos") { 40.0 } else { monitor.y - SIZE.y - 60.0 };
+        let builder = egui::ViewportBuilder::default()
+            .with_title(platform::TOAST_TITLE)
+            .with_position([monitor.x - SIZE.x - 16.0, y])
+            .with_inner_size(SIZE)
+            .with_decorations(false)
+            .with_resizable(false)
+            .with_taskbar(false)
+            .with_active(false)
+            .with_window_level(egui::WindowLevel::AlwaysOnTop);
+        let clicked = ctx.show_viewport_immediate(toast.id, builder, |ui, _| {
+            let frame = egui::Frame::new().fill(ui.visuals().window_fill).inner_margin(12.0);
+            let resp = egui::CentralPanel::default()
+                .frame(frame)
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(egui::RichText::new(egui_phosphor::regular::CHECK_CIRCLE).size(22.0).color(egui::Color32::from_rgb(40, 170, 90)));
+                        ui.vertical(|ui| {
+                            ui.label(egui::RichText::new(&toast.message).strong());
+                            if toast.path.is_some() {
+                                ui.weak(if cfg!(target_os = "macos") { "Click to show in Finder" } else { "Click to show the file" });
+                            }
+                        });
+                    });
+                })
+                .response;
+            ui.interact(resp.rect, egui::Id::new("toast-click"), egui::Sense::click()).clicked()
+        });
+        if !toast.shown {
+            platform::make_transient(platform::TOAST_TITLE);
+            toast.shown = true;
+        }
+        if clicked {
+            if let Some(path) = &toast.path {
+                platform::reveal(path);
+            }
+            self.toast = None;
+        }
+    }
+
     /// Explain how to grant Screen Recording access (shown at most once at a time).
     fn permission_notice(&mut self) {
         if self.notices.iter().any(|n| n.permission) {
@@ -215,10 +310,22 @@ impl App {
             match ev {
                 AppEvent::Hotkey(id) => {
                     if let Some(mode) = self.hotkeys.mode_for(id) {
-                        self.start_capture(mode, ctx);
+                        self.request_capture(mode, false, ctx);
                     }
                 }
                 AppEvent::Menu(id) => self.handle_menu(&id, ctx),
+                AppEvent::TrayClick => {
+                    let mode = match self.config.tray_click {
+                        TrayClick::ShowMenu => None,
+                        TrayClick::CaptureRegion => Some(CaptureMode::Region),
+                        TrayClick::CaptureWindow => Some(CaptureMode::Window),
+                        TrayClick::CaptureFullscreen => Some(CaptureMode::Fullscreen),
+                        TrayClick::CaptureLastRegion => Some(CaptureMode::LastRegion),
+                    };
+                    if let Some(mode) = mode {
+                        self.request_capture(mode, true, ctx);
+                    }
+                }
             }
         }
         if let Some((mode, at)) = self.pending_capture {
@@ -233,13 +340,11 @@ impl App {
     }
 
     fn handle_menu(&mut self, id: &str, ctx: &egui::Context) {
-        // Give the tray menu time to disappear before grabbing the screen.
-        let delayed = |mode| Some((mode, Instant::now() + Duration::from_millis(250)));
         match id {
-            tray::CAPTURE_REGION => self.pending_capture = delayed(CaptureMode::Region),
-            tray::CAPTURE_WINDOW => self.pending_capture = delayed(CaptureMode::Window),
-            tray::CAPTURE_FULLSCREEN => self.pending_capture = delayed(CaptureMode::Fullscreen),
-            tray::CAPTURE_LAST_REGION => self.pending_capture = delayed(CaptureMode::LastRegion),
+            tray::CAPTURE_REGION => self.request_capture(CaptureMode::Region, true, ctx),
+            tray::CAPTURE_WINDOW => self.request_capture(CaptureMode::Window, true, ctx),
+            tray::CAPTURE_FULLSCREEN => self.request_capture(CaptureMode::Fullscreen, true, ctx),
+            tray::CAPTURE_LAST_REGION => self.request_capture(CaptureMode::LastRegion, true, ctx),
             tray::OPEN_CLIPBOARD => match output::image_from_clipboard() {
                 Some(img) => self.open_editor(img, "Clipboard", Local::now()),
                 None => self.notice("Clipboard", "There is no image on the clipboard.", false),
@@ -287,6 +392,26 @@ impl App {
         ctx.request_repaint();
     }
 
+    fn snapshot_options(&self, windows: bool) -> capture::SnapshotOptions {
+        capture::SnapshotOptions { windows, pointer: self.config.capture_pointer }
+    }
+
+    /// Start a capture now, or after the configured delay. Menu clicks wait
+    /// at least long enough for the menu to disappear from the screen.
+    fn request_capture(&mut self, mode: CaptureMode, from_menu: bool, ctx: &egui::Context) {
+        let mut delay = Duration::from_secs(self.config.capture_delay_secs as u64);
+        if from_menu {
+            delay = delay.max(Duration::from_millis(250));
+        }
+        if delay.is_zero() {
+            self.start_capture(mode, ctx);
+        } else {
+            log::info!("{} in {:.1}s", mode.label(), delay.as_secs_f32());
+            self.pending_capture = Some((mode, Instant::now() + delay));
+            ctx.request_repaint_after(delay);
+        }
+    }
+
     fn start_capture(&mut self, mode: CaptureMode, ctx: &egui::Context) {
         if self.overlay.is_some() {
             return;
@@ -304,10 +429,10 @@ impl App {
             return;
         }
         let result = match mode {
-            CaptureMode::Region | CaptureMode::Window => capture::take_snapshot(true).map(|snap| {
+            CaptureMode::Region | CaptureMode::Window => capture::take_snapshot(self.snapshot_options(true)).map(|snap| {
                 self.overlay = Some(Overlay::new(snap, mode == CaptureMode::Window, self.config.show_magnifier));
             }),
-            CaptureMode::Fullscreen => capture::take_snapshot(false).map(|snap| {
+            CaptureMode::Fullscreen => capture::take_snapshot(self.snapshot_options(false)).map(|snap| {
                 if let Some(image) = snap.stitch_all() {
                     self.deliver(Capture { image, title: "Full screen".into(), taken_at: snap.taken_at });
                 }
@@ -317,7 +442,7 @@ impl App {
                     self.start_capture(CaptureMode::Region, ctx);
                     Ok(())
                 }
-                Some(region) => capture::take_snapshot(false).map(|snap| {
+                Some(region) => capture::take_snapshot(self.snapshot_options(false)).map(|snap| {
                     if let Some(image) = snap.crop(&region) {
                         self.deliver(Capture { image, title: String::new(), taken_at: snap.taken_at });
                     }
@@ -353,13 +478,15 @@ impl App {
                 self.open_editor(cap.image.clone(), &cap.title, cap.taken_at);
                 Ok(())
             }
-            Destination::Clipboard => output::copy_image_to_clipboard(&cap.image),
+            Destination::Clipboard => {
+                output::copy_image_to_clipboard(&cap.image).map(|_| self.notify("Copied to clipboard", None))
+            }
             Destination::File => {
                 let path = output::auto_path(&self.config, &cap.title, cap.taken_at);
-                save_and_report(&self.config, &cap.image, &path).map(|_| ())
+                save_and_report(&self.config, &cap.image, &path).map(|p| self.notify_saved(p))
             }
             Destination::FileAs => match ask_save_path(&self.config, &cap.title, cap.taken_at) {
-                Some(path) => output::save_to(&cap.image, &path, &self.config),
+                Some(path) => output::save_to(&cap.image, &path, &self.config).map(|_| self.notify_saved(path)),
                 None => Ok(()),
             },
         };
@@ -451,6 +578,7 @@ impl App {
         let config = &self.config;
         let mut closed = Vec::new();
         let mut errors = Vec::new();
+        let mut toasts: Vec<(String, Option<PathBuf>)> = Vec::new();
         for (idx, ew) in self.editors.iter_mut().enumerate() {
             let (w, h) = ew.editor.image_size();
             let ppp = ctx.pixels_per_point().max(1.0);
@@ -476,10 +604,17 @@ impl App {
             let mut close = close_requested;
             for req in requests {
                 let result = match req {
-                    EditorRequest::Save => save_editor(config, ew, false),
-                    EditorRequest::SaveAs => save_editor(config, ew, true),
-                    EditorRequest::Copy => output::copy_image_to_clipboard(&ew.editor.flatten())
-                        .map(|_| ew.editor.set_status("Copied to clipboard")),
+                    EditorRequest::Save | EditorRequest::SaveAs => {
+                        save_editor(config, ew, req == EditorRequest::SaveAs).map(|saved| {
+                            if let Some(path) = saved {
+                                toasts.push(("Saved".into(), Some(path)));
+                            }
+                        })
+                    }
+                    EditorRequest::Copy => output::copy_image_to_clipboard(&ew.editor.flatten()).map(|_| {
+                        ew.editor.set_status("Copied to clipboard");
+                        toasts.push(("Copied to clipboard".into(), None));
+                    }),
                     EditorRequest::Close => {
                         close = true;
                         Ok(())
@@ -503,6 +638,9 @@ impl App {
         }
         for e in errors {
             log::error!("editor: {e}");
+        }
+        for (message, path) in toasts {
+            self.notify(&message, path);
         }
     }
 
@@ -611,11 +749,12 @@ fn save_and_report(config: &Config, image: &RgbaImage, path: &std::path::Path) -
     Ok(path.to_path_buf())
 }
 
-fn save_editor(config: &Config, ew: &mut EditorWindow, ask: bool) -> anyhow::Result<()> {
+/// Save an editor's image. Returns the path, or `None` if the user cancelled.
+fn save_editor(config: &Config, ew: &mut EditorWindow, ask: bool) -> anyhow::Result<Option<PathBuf>> {
     let path = if ask {
         match ask_save_path(config, &ew.editor.title, ew.taken_at) {
             Some(p) => p,
-            None => return Ok(()),
+            None => return Ok(None),
         }
     } else {
         match &ew.path {
@@ -626,8 +765,8 @@ fn save_editor(config: &Config, ew: &mut EditorWindow, ask: bool) -> anyhow::Res
     let path = save_and_report(config, &ew.editor.flatten(), &path)?;
     ew.editor.mark_saved();
     ew.editor.set_status(format!("Saved to {}", path.display()));
-    ew.path = Some(path);
-    Ok(())
+    ew.path = Some(path.clone());
+    Ok(Some(path))
 }
 
 /// Ask about unsaved changes. Returns true if the editor may close.
@@ -642,7 +781,7 @@ fn confirm_close(config: &Config, ew: &mut EditorWindow) -> bool {
         .show();
     match answer {
         rfd::MessageDialogResult::Yes => match save_editor(config, ew, false) {
-            Ok(()) => true,
+            Ok(_) => true,
             Err(e) => {
                 ew.editor.set_status(format!("Error: {e:#}"));
                 false
@@ -674,6 +813,7 @@ impl eframe::App for App {
         self.show_editors(&ctx);
         self.show_settings(&ctx);
         self.show_notices(&ctx);
+        self.show_toast(&ctx);
     }
 
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {

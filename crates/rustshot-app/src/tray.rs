@@ -46,7 +46,11 @@ impl Tray {
             &item(QUIT, "Quit Rustshot", None),
         ])?;
 
-        let builder = TrayIconBuilder::new().with_menu(Box::new(menu)).with_tooltip("Rustshot");
+        let builder = TrayIconBuilder::new()
+            .with_menu(Box::new(menu))
+            .with_tooltip("Rustshot")
+            // With a click action set, left click captures and right click opens the menu.
+            .with_menu_on_left_click(config.tray_click == rustshot_core::TrayClick::ShowMenu);
         #[cfg(target_os = "macos")]
         let builder = builder.with_icon_templated(tray_icon_image());
         #[cfg(not(target_os = "macos"))]
