@@ -4563,7 +4563,7 @@ dependencies = [
 
 [[package]]
 name = "rustshot-app"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "block2 0.6.2",
@@ -4588,7 +4588,7 @@ dependencies = [
 
 [[package]]
 name = "rustshot-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "arboard",
@@ -4609,7 +4609,7 @@ dependencies = [
 
 [[package]]
 name = "rustshot-editor"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "ab_glyph",
  "egui",
@@ -4622,7 +4622,7 @@ dependencies = [
 
 [[package]]
 name = "rustshot-i18n"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "fluent-bundle",
  "log",
@@ -6495,7 +6495,7 @@ checksum = "e450f9b2ed1dff33c94c12589a87338689467b9c4f5d8a5710bd09a847d2c8a7"
 
 [[package]]
 name = "xtask"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "image",
