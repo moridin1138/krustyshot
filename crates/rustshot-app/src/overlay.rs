@@ -19,6 +19,10 @@ pub struct Overlay {
     window_mode: bool,
     show_magnifier: bool,
     drag_start: Option<(f64, f64)>,
+    /// The mouse button went down while the overlay was open. A release
+    /// without this (e.g. from a click that started before the overlay
+    /// appeared) must not trigger a capture.
+    pressed_here: bool,
     cursor: Option<(f64, f64)>,
     frames: u32,
     outcome: Option<Outcome>,
@@ -35,6 +39,7 @@ impl Overlay {
             window_mode,
             show_magnifier,
             drag_start: None,
+            pressed_here: false,
             cursor: None,
             frames: 0,
             outcome: None,
@@ -149,10 +154,13 @@ impl Overlay {
             self.window_mode = !self.window_mode;
             self.drag_start = None;
         }
-        if pressed && pos.is_some() && !self.window_mode {
-            self.drag_start = self.cursor;
+        if pressed && pos.is_some() {
+            self.pressed_here = true;
+            if !self.window_mode {
+                self.drag_start = self.cursor;
+            }
         }
-        if released && pos.is_some() {
+        if released && pos.is_some() && std::mem::take(&mut self.pressed_here) {
             let cursor = self.cursor.unwrap_or_default();
             let dragged = self
                 .drag_start

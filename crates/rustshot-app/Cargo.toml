@@ -20,9 +20,12 @@ tray-icon = "0.26.1"
 winit = "0.30"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-objc2 = "0.6"
+objc2 = { version = "0.6", features = ["exception"] }
 objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSWindow", "NSResponder", "NSRunningApplication", "NSScreen", "NSGraphics"] }
-objc2-foundation = { version = "0.3", features = ["NSUserDefaults", "NSString"] }
+objc2-foundation = { version = "0.3", features = ["NSString", "NSSet"] }
+
+[target.'cfg(target_os = "macos")'.dev-dependencies]
+block2 = "0.6"
 
 [[bin]]
 name = "rustshot"

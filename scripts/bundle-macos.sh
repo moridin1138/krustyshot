@@ -31,6 +31,37 @@ iconutil -c icns "$iconset" -o "$app/Contents/Resources/Rustshot.icns"
 
 sed "s/@VERSION@/$version/g" crates/rustshot-app/bundle/Info.plist > "$app/Contents/Info.plist"
 
-# Ad-hoc signature so Gatekeeper treats it as one app (not a notarised build).
-codesign --force --deep --sign - "$app"
+# Sign. With RUSTSHOT_SIGNING_P12 and RUSTSHOT_SIGNING_PASSWORD set (see
+# scripts/make-signing-cert.sh), use Rustshot's self-signed certificate so
+# every build has the same identity and macOS keeps its permissions.
+# Otherwise fall back to an ad-hoc signature, which changes every build.
+if [ -n "${RUSTSHOT_SIGNING_P12:-}" ]; then
+  : "${RUSTSHOT_SIGNING_PASSWORD:?set RUSTSHOT_SIGNING_PASSWORD too}"
+  keychain=$(mktemp -d)/rustshot-signing.keychain-db
+  kc_password=$(/usr/bin/openssl rand -hex 16)
+  # codesign only finds identities in keychains on the search list, so add a
+  # throwaway keychain for the duration and always put the list back.
+  original_keychains=$(security list-keychains -d user | tr -d '"')
+  cleanup() {
+    # shellcheck disable=SC2086
+    security list-keychains -d user -s $original_keychains
+    security delete-keychain "$keychain" 2>/dev/null || true
+  }
+  trap cleanup EXIT
+  security create-keychain -p "$kc_password" "$keychain"
+  security set-keychain-settings "$keychain"
+  security unlock-keychain -p "$kc_password" "$keychain"
+  security import "$RUSTSHOT_SIGNING_P12" -k "$keychain" -P "$RUSTSHOT_SIGNING_PASSWORD" -T /usr/bin/codesign >/dev/null
+  security set-key-partition-list -S apple-tool:,apple: -s -k "$kc_password" "$keychain" >/dev/null
+  # shellcheck disable=SC2086
+  security list-keychains -d user -s "$keychain" $original_keychains
+  identity=$(security find-certificate -a -c "Rustshot Self-Signed" -Z "$keychain" | awk '/SHA-1 hash:/ {print $3; exit}')
+  [ -n "$identity" ] || { echo "no Rustshot Self-Signed certificate in $RUSTSHOT_SIGNING_P12" >&2; exit 1; }
+  codesign --force --deep --keychain "$keychain" --sign "$identity" \
+    --identifier org.rustshot.Rustshot "$app"
+  echo "signed with Rustshot Self-Signed ($identity)"
+else
+  echo "RUSTSHOT_SIGNING_P12 not set: ad-hoc signing (macOS permissions reset every build)" >&2
+  codesign --force --deep --sign - "$app"
+fi
 echo "built $app ($version)"

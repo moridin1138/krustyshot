@@ -101,10 +101,15 @@ Undo works by snapshot. Before each change the whole `Document` is pushed onto `
 
 Unit tests sit next to the code and cover the parts that don't need a display: geometry and crop maths, Retina scaling, stitching, filename patterns, config round-trips, saving every format, hit testing, undo and redo, crop, the pixel effects, and export rendering. Run them with `cargo test`. Capture and UI behaviour is checked by hand (see the release checklist in [RELEASING.md](RELEASING.md)).
 
+Debug builds have two developer switches (environment variables, ignored in release builds):
+
+- `RUSTSHOT_IGNORE_PERMISSION=1` skips the Screen Recording check, so the overlay can be exercised under a debugger, which never has the permission.
+- `RUSTSHOT_STRESS=1` opens and closes editor windows (with a focused text box) and message windows in a loop, to hunt window-lifecycle bugs without touching files or the clipboard.
+
 CI (`.github/workflows/ci.yml`) runs clippy with warnings as errors, plus the tests, on macOS, Windows and Linux.
 
 ## Platform notes
 
-- **macOS:** needs Screen Recording permission (`permissions.rs`). Default hotkeys avoid ⌘⇧3/4/5.
+- **macOS:** needs Screen Recording permission (`permissions.rs`). Captures are refused with an explanation rather than producing wallpaper-only images when it is missing. Default hotkeys avoid ⌘⇧3/4/5. `touchbar_guard.rs` catches an exception AppKit's Touch Bar code raises at random (`-[_NSTouchBarFinderObservation invalidate]`), which otherwise crashes the app; its unit test reproduces the exception. Builds are signed with the project's self-signed certificate (`scripts/bundle-macos.sh`, see [RELEASING.md](RELEASING.md)) so permissions survive updates.
 - **Windows:** Greenshot's Print Screen hotkeys. Release builds use the GUI subsystem so no console window opens. Monitors with different scale factors are not yet tested.
 - **Linux:** works on X11. On Wayland, global hotkeys and window listing are limited by the compositor.

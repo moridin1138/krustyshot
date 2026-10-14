@@ -12,12 +12,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 - macOS: captures no longer silently show only the desktop background when Rustshot lacks Screen Recording permission. Rustshot now explains how to grant it, with buttons to open System Settings, reset a stale permission entry, and quit so it can be reopened.
 - macOS: only one permission prompt appears at startup, instead of Apple's prompt and Rustshot's window competing.
-- macOS: fixed a crash when closing windows, caused by AppKit's Touch Bar support.
+- macOS: fixed a crash after a few minutes to an hour of use, caused by an error inside AppKit's Touch Bar support (even on Macs without a Touch Bar). Rustshot now catches that error instead of quitting.
+- The capture overlay could take a screenshot by itself if a mouse button was released just after it opened. A capture now needs a click or drag that starts inside the overlay.
 - macOS: Mission Control no longer zooms all the way out on the desktop where Rustshot is running. Rustshot's hidden background window is now kept on-screen and excluded from Mission Control.
+- Esc now closes Rustshot's message windows.
 - Shortcut hints in tooltips showed empty boxes for the ⇧ and ⌥ symbols. They now read, for example, "Cmd+Shift+S" on macOS and "Ctrl+Shift+S" elsewhere.
 
 ### Changed
 
+- macOS builds are signed with Rustshot's own certificate, so macOS keeps the Screen Recording permission when you update. You'll need to grant it once more for 0.1.1. Builds are still not notarised by Apple, so the first launch needs right-click and Open.
 - Licence changed from GPL-3.0-or-later to the [PolyForm Shield License 1.0.0](LICENSE): free for any use, including commercial, except providing a product that competes with Rustshot (such as reselling it). Version 0.1.0 remains available under GPL-3.0-or-later.
 
 ## [0.1.0] - 2026-10-13

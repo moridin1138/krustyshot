@@ -182,6 +182,18 @@ impl Editor {
         }
     }
 
+    /// Place a text annotation and give it keyboard focus, as if the user had
+    /// clicked with the Text tool. Used by the app's debug stress test.
+    #[doc(hidden)]
+    pub fn debug_start_text(&mut self, text: &str) {
+        self.set_tool(Tool::Text);
+        self.checkpoint();
+        let mut e = Element::new(Kind::Text, Pos2::new(20.0, 20.0), self.style);
+        e.text = text.to_string();
+        self.doc.elements.push(e);
+        self.start_text_edit(self.doc.elements.len() - 1);
+    }
+
     /// The annotated image as it will be saved.
     pub fn flatten(&self) -> RgbaImage {
         export::flatten(&self.doc)

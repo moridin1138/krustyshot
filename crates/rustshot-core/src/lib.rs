@@ -11,4 +11,5 @@ pub mod permissions;
 pub use capture::{MonitorShot, Snapshot, WindowInfo};
 pub use config::{Config, Destination, OutputFormat};
 pub use geometry::Region;
+pub use image;
 pub use image::RgbaImage;

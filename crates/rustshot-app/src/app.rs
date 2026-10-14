@@ -79,6 +79,8 @@ pub struct App {
     notices: Vec<Notice>,
     quit: bool,
     background_hidden: bool,
+    /// Debug builds only: next step of the RUSTSHOT_STRESS window test.
+    stress: Option<(Instant, u64)>,
 }
 
 impl App {
@@ -130,6 +132,8 @@ impl App {
             notices: Vec::new(),
             quit: false,
             background_hidden: false,
+            stress: (cfg!(debug_assertions) && std::env::var_os("RUSTSHOT_STRESS").is_some())
+                .then(|| (Instant::now() + Duration::from_secs(2), 0)),
         };
 
         // Let macOS show its own permission prompt once (this also adds Rustshot
@@ -159,6 +163,32 @@ impl App {
             permission,
             shown: false,
         });
+    }
+
+    /// Debug builds with RUSTSHOT_STRESS=1: open and close editor and notice
+    /// windows in a loop, to reproduce window-lifecycle bugs without
+    /// touching the user's files or clipboard.
+    fn stress_step(&mut self, ctx: &egui::Context) {
+        let Some((at, n)) = self.stress else { return };
+        let now = Instant::now();
+        if now < at {
+            ctx.request_repaint_after(at - now);
+            return;
+        }
+        match n % 4 {
+            0 => {
+                self.open_editor(RgbaImage::from_pixel(400, 300, image_rgba(n)), &format!("Stress {n}"), Local::now());
+                if let Some(ew) = self.editors.last_mut() {
+                    ew.editor.debug_start_text("typing");
+                }
+            }
+            1 => self.editors.clear(),
+            2 => self.notice("Stress", &format!("Stress notice {n}"), false),
+            _ => self.notices.clear(),
+        }
+        log::debug!("stress step {n}");
+        self.stress = Some((now + Duration::from_millis(700), n + 1));
+        ctx.request_repaint();
     }
 
     /// Explain how to grant Screen Recording access (shown at most once at a time).
@@ -263,7 +293,10 @@ impl App {
         }
         // Without permission macOS returns only the wallpaper, which looks like
         // a broken screenshot. Explain instead of capturing.
-        if !permissions::has_screen_capture_access() {
+        // Debug builds can set RUSTSHOT_IGNORE_PERMISSION=1 to exercise the
+        // overlay under a debugger, which never has Screen Recording access.
+        let ignore_permission = cfg!(debug_assertions) && std::env::var_os("RUSTSHOT_IGNORE_PERMISSION").is_some();
+        if !ignore_permission && !permissions::has_screen_capture_access() {
             log::warn!("capture blocked: no Screen Recording permission");
             self.permission_notice();
             platform::activate_app();
@@ -504,7 +537,7 @@ impl App {
                 .with_inner_size(size)
                 .with_window_level(egui::WindowLevel::AlwaysOnTop);
             let close = ctx.show_viewport_immediate(n.id, builder, |ui, _| {
-                let mut close = ui.input(|i| i.viewport().close_requested());
+                let mut close = ui.input(|i| i.viewport().close_requested() || i.key_pressed(egui::Key::Escape));
                 egui::CentralPanel::default().show(ui, |ui| {
                     ui.heading(&n.title);
                     ui.add_space(6.0);
@@ -552,6 +585,10 @@ impl App {
             ctx.request_repaint();
         }
     }
+}
+
+fn image_rgba(n: u64) -> rustshot_core::image::Rgba<u8> {
+    rustshot_core::image::Rgba([(n * 37 % 255) as u8, 120, 200, 255])
 }
 
 fn ask_save_path(config: &Config, title: &str, time: DateTime<Local>) -> Option<PathBuf> {
@@ -619,6 +656,7 @@ fn confirm_close(config: &Config, ew: &mut EditorWindow) -> bool {
 impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.handle_events(ctx);
+        self.stress_step(ctx);
         if self.quit {
             ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, egui::ViewportCommand::Close);
         }

@@ -60,8 +60,20 @@ jobs:
 
       - name: Package (macOS .app)
         if: runner.os == 'macOS'
+        env:
+          MACOS_SIGNING_P12_BASE64: ${{ secrets.MACOS_SIGNING_P12_BASE64 }}
+          RUSTSHOT_SIGNING_PASSWORD: ${{ secrets.MACOS_SIGNING_PASSWORD }}
         run: |
+          # Sign with Rustshot's self-signed certificate so macOS keeps
+          # permissions across updates (see scripts/make-signing-cert.sh).
+          if [ -n "$MACOS_SIGNING_P12_BASE64" ]; then
+            export RUSTSHOT_SIGNING_P12="$RUNNER_TEMP/rustshot-signing.p12"
+            echo "$MACOS_SIGNING_P12_BASE64" | base64 --decode > "$RUSTSHOT_SIGNING_P12"
+          else
+            echo "::warning::MACOS_SIGNING_P12_BASE64 is not set; building with an ad-hoc signature"
+          fi
           scripts/bundle-macos.sh ${{ matrix.target }}
+          rm -f "$RUNNER_TEMP/rustshot-signing.p12"
           cd target/${{ matrix.target }}/release/bundle
           ditto -c -k --keepParent Rustshot.app "$GITHUB_WORKSPACE/Rustshot-${GITHUB_REF_NAME}-${{ matrix.name }}.zip"
       - name: Package (Windows)

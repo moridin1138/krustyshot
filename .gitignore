@@ -1,2 +1,7 @@
 /target
 .DS_Store
+
+# Signing material must never be committed
+*.p12
+*.keychain-db
+rustshot-signing/

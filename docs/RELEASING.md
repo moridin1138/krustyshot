@@ -23,8 +23,11 @@ Every pull request or change that users would notice adds a line under `## [Unre
 2. **Test a local release build on macOS.** Running with `cargo run` is not enough: it borrows your terminal's Screen Recording permission and hides permission and packaging bugs. Instead:
    ```bash
    cargo build --release -p rustshot-app
+   export RUSTSHOT_SIGNING_P12=~/Documents/rustshot-signing/rustshot-signing.p12
+   export RUSTSHOT_SIGNING_PASSWORD="$(cat ~/Documents/rustshot-signing/password.txt)"
    scripts/bundle-macos.sh
    ```
+   Signing with the project certificate means macOS keeps the Screen Recording permission between test builds. Without the two variables the bundle is ad-hoc signed and you have to grant permission again every time.
    Quit any running Rustshot, replace `/Applications/Rustshot.app` with `target/release/bundle/Rustshot.app`, and open it **from Finder**. Then check:
    - At most one permission prompt appears at startup.
    - Without permission, a capture hotkey shows Rustshot's permission window (not a wallpaper-only screenshot). Reset permission, Open System Settings and Quit work.
@@ -61,7 +64,20 @@ Every pull request or change that users would notice adds a line under `## [Unre
 - **The workflow fails before building:** the tag and `Cargo.toml` disagree, or the changelog heading is missing. Delete the tag (`git tag -d vX.Y.Z && git push origin :vX.Y.Z`), fix it, and tag again.
 - **A bad release has been published:** don't reuse its version number. Fix the problem and release the next patch version.
 
+## macOS signing
+
+Releases are signed with a self-signed certificate ("Rustshot Self-Signed") so every build has the same code identity. macOS ties privacy permissions such as Screen Recording to that identity, so users keep them across updates. It is not an Apple Developer ID, so Gatekeeper still asks users to confirm the first launch.
+
+One-time setup (already done for this repository; only repeat if the certificate is lost):
+
+1. Run `scripts/make-signing-cert.sh`. It writes `rustshot-signing.p12` and `password.txt` to `~/Documents/rustshot-signing/`. Keep that folder private and backed up, and never commit it. A new certificate makes every user grant permission again.
+2. Add two repository secrets on GitHub (Settings > Secrets and variables > Actions):
+   - `MACOS_SIGNING_P12_BASE64`: the output of `base64 -i ~/Documents/rustshot-signing/rustshot-signing.p12`
+   - `MACOS_SIGNING_PASSWORD`: the contents of `password.txt`
+
+If the secrets are missing, the release workflow still builds but warns and uses an ad-hoc signature.
+
 ## Not done yet
 
-- macOS code signing and notarisation. Until then, users must right-click and choose Open the first time.
+- Apple notarisation (needs a paid Apple Developer ID). Until then, users must right-click and choose Open the first time.
 - Windows code signing and an installer.
