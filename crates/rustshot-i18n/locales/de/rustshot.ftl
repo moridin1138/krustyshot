@@ -7,6 +7,10 @@ capture-fullscreen = Ganzen Bildschirm aufnehmen
 capture-last-region = Letzten Bereich aufnehmen
 capture-region = Bereich aufnehmen
 capture-window = Fenster aufnehmen
+record-fullscreen = Ganzen Bildschirm aufnehmen
+record-region = Bereich aufnehmen …
+record-stop = Aufnahme beenden
+record-window = Fenster aufnehmen …
 
 ## Menu-bar / tray menu
 
@@ -31,10 +35,56 @@ picker-heading = Bildschirmfoto { $width } × { $height }
 
 overlay-help-region = Ziehen, um einen Bereich zu wählen  ·  Auf ein Fenster klicken, um es aufzunehmen  ·  Leertaste: Fenstermodus  ·  Esc: abbrechen
 overlay-help-window = Auf ein Fenster klicken, um es aufzunehmen  ·  Leertaste: Bereichsmodus  ·  Esc: abbrechen
+overlay-record-help-region = Aufnehmen: Bereich aufziehen  ·  Auf ein Fenster oder den Schreibtisch klicken  ·  Leertaste: Fenstermodus  ·  Esc: abbrechen
+overlay-record-help-window = Aufnehmen: Auf ein Fenster klicken  ·  Leertaste: Bereichsmodus  ·  Esc: abbrechen
+
+## Recording
+
+recording-bar-title = Rustshot-Aufnahme
+recording-discard = Verwerfen
+recording-discard-body = Die Aufnahme wird beendet und das Video gelöscht. Das lässt sich nicht widerrufen.
+recording-discard-tip = Aufnahme beenden und verwerfen
+recording-discard-title = Diese Aufnahme verwerfen?
+recording-keep = Weiter aufnehmen
+recording-no-display = Es ließ sich nicht feststellen, welcher Bildschirm aufgenommen werden soll. Versuche es erneut.
+recording-stop = Beenden
+
+## Settings: recording
+
+rec-estimate = Bis zu etwa { $size } pro Minute für eine Aufnahme des ganzen Bildschirms
+rec-estimate-sub = { $width } × { $height } mit { $fps } fps auf deinem Hauptbildschirm. Ruhige Bildschirme und kleinere Bereiche brauchen deutlich weniger.
+rec-format = Format
+rec-format-gif-hint = GIF: lässt sich überall abspielen, auch in Chat-Apps und auf Webseiten, aber die Dateien werden schnell groß. Ideal für kurze Clips.
+rec-format-gif-only-hint = MP4-Aufnahmen kommen bald auf diese Plattform; bis dahin werden Aufnahmen als GIF gesichert, ideal für kurze Clips.
+rec-format-mp4-hint = MP4: kleine Dateien, flüssiges Video. Ideal für alles, was länger als ein paar Sekunden dauert.
+rec-fps = Bildrate
+rec-fps-value = { $fps } fps
+rec-full-resolution = Volle Auflösung
+rec-full-resolution-sub = Auf hochauflösenden (Retina-)Bildschirmen. Ausgeschaltet sieht es in normaler Größe gleich aus und braucht etwa ein Viertel des Speicherplatzes.
+rec-quality = Qualität
+rec-quality-high = Hoch
+rec-quality-low = Niedrig
+rec-quality-medium = Mittel
+rec-quality-sub = Höhere Qualität braucht mehr Speicherplatz
+rec-shortcut-hint = Starte und beende Aufnahmen über das Menü oder mit dem Kurzbefehl unter „Kurzbefehle“.
+
+## Disk space
+
+disk-change-folder = Ordner ändern …
+disk-continue = Trotzdem fortfahren
+disk-low-body =
+    Auf dem Volume, auf dem Rustshot Bildschirmfotos und Aufnahmen sichert, sind nur noch { $free } ({ $percent } %) frei:
+
+    { $folder }
+
+    Das Sichern kann fehlschlagen, wenn das Volume voll ist. Gib Speicherplatz frei oder wähle einen Ordner auf einem anderen Volume.
+disk-low-title = Wenig Speicherplatz
 
 ## Notifications
 
 toast-copied = In die Zwischenablage kopiert
+toast-recording-discarded = Aufnahme verworfen
+toast-recording-saved = { $name } gesichert ({ $size })
 toast-saved = { $name } gesichert
 toast-show-file = Klicken, um die Datei anzuzeigen
 toast-show-finder = Klicken, um sie im Finder zu zeigen
@@ -42,6 +92,8 @@ toast-show-finder = Klicken, um sie im Finder zu zeigen
 ## Messages
 
 notice-capture-failed = Aufnahme fehlgeschlagen
+notice-disk-full-body = Das Volume war fast voll. Rustshot hat die Aufnahme deshalb beendet und das Bisherige gesichert. Gib Speicherplatz frei, bevor du erneut aufnimmst.
+notice-disk-full-title = Aufnahme beendet
 notice-hotkeys-body =
     Einige Kurzbefehle konnten nicht registriert werden (vielleicht verwendet eine andere App sie):
 
@@ -51,6 +103,7 @@ notice-hotkeys-body =
 notice-hotkeys-title = Kurzbefehle
 notice-no-clipboard-image = In der Zwischenablage ist kein Bild.
 notice-open-image = Bild öffnen
+notice-recording-failed = Aufnahme fehlgeschlagen
 
 ## Screen Recording permission (macOS)
 
@@ -87,6 +140,7 @@ about-settings-file = Einstellungsdatei
 
 title-clipboard = Zwischenablage
 title-full-screen = Ganzer Bildschirm
+title-recording = Aufnahme
 title-screenshot = Bildschirmfoto
 
 ## Editor status bar
@@ -197,6 +251,9 @@ settings-example = Beispiel: { $name }
 settings-file-name = Dateiname
 settings-folder = Ordner
 settings-format = Format
+settings-free-space = Freier Speicher
+settings-free-space-low = Dieses Volume ist fast voll. Rustshot warnt vor dem Aufnehmen; wähle am besten einen Ordner auf einem anderen Volume.
+settings-free-space-value = { $free } von { $total } ({ $percent } %)
 settings-general = Allgemein
 settings-icon-click = Klick auf das Symbol
 settings-jpeg-quality = JPEG-Qualität
@@ -210,6 +267,7 @@ settings-off = Aus
 settings-open-at-login = Bei der Anmeldung öffnen
 settings-otherwise-always = Sonst immer:
 settings-pointer = Mauszeiger einbeziehen
+settings-recording = Videoaufnahme
 settings-right-click-hint = Klicke mit der rechten Maustaste auf das Symbol, um das Menü zu öffnen.
 settings-saving = Sichern
 settings-seconds = { $n } s
@@ -229,6 +287,7 @@ shortcut-need-modifier = Nimm eine Sondertaste dazu: Strg, Alt, Umschalt oder Wi
 shortcut-need-modifier-mac = Nimm eine Sondertaste dazu: Wahl, Control, Umschalt oder Befehl.
 shortcut-none = Keiner
 shortcut-press-keys = Tasten drücken …
+shortcut-record = Aufnahme starten oder beenden
 shortcut-restore = Standardkurzbefehle wiederherstellen
 shortcut-tip = Klicken und dann den neuen Kurzbefehl drücken
 

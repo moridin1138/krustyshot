@@ -11,6 +11,10 @@ pub const CAPTURE_REGION: &str = "capture_region";
 pub const CAPTURE_LAST_REGION: &str = "capture_last_region";
 pub const CAPTURE_WINDOW: &str = "capture_window";
 pub const CAPTURE_FULLSCREEN: &str = "capture_fullscreen";
+pub const RECORD_REGION: &str = "record_region";
+pub const RECORD_WINDOW: &str = "record_window";
+pub const RECORD_FULLSCREEN: &str = "record_fullscreen";
+pub const RECORD_STOP: &str = "record_stop";
 pub const OPEN_CLIPBOARD: &str = "open_clipboard";
 pub const OPEN_FILE: &str = "open_file";
 pub const OPEN_FOLDER: &str = "open_folder";
@@ -28,7 +32,8 @@ fn item(id: &str, text: &str, hotkey: Option<&str>) -> MenuItem {
 }
 
 impl Tray {
-    pub fn new(config: &Config) -> anyhow::Result<Self> {
+    /// `recording`: show "Stop recording" and a red icon.
+    pub fn new(config: &Config, recording: bool) -> anyhow::Result<Self> {
         let menu = Menu::new();
         let hk = &config.hotkeys;
         menu.append_items(&[
@@ -36,6 +41,18 @@ impl Tray {
             &item(CAPTURE_LAST_REGION, &tr!("capture-last-region"), Some(&hk.last_region)),
             &item(CAPTURE_WINDOW, &tr!("capture-window"), Some(&hk.window)),
             &item(CAPTURE_FULLSCREEN, &tr!("capture-fullscreen"), Some(&hk.fullscreen)),
+            &PredefinedMenuItem::separator(),
+        ])?;
+        if recording {
+            menu.append(&item(RECORD_STOP, &tr!("record-stop"), Some(&hk.record)))?;
+        } else {
+            menu.append_items(&[
+                &item(RECORD_REGION, &tr!("record-region"), Some(&hk.record)),
+                &item(RECORD_WINDOW, &tr!("record-window"), None),
+                &item(RECORD_FULLSCREEN, &tr!("record-fullscreen"), None),
+            ])?;
+        }
+        menu.append_items(&[
             &PredefinedMenuItem::separator(),
             &item(OPEN_CLIPBOARD, &tr!("menu-open-clipboard"), None),
             &item(OPEN_FILE, &tr!("menu-open-file"), None),
@@ -53,9 +70,14 @@ impl Tray {
             // With a click action set, left click captures and right click opens the menu.
             .with_menu_on_left_click(config.tray_click == rustshot_core::TrayClick::ShowMenu);
         #[cfg(target_os = "macos")]
-        let builder = builder.with_icon_templated(tray_icon_image());
+        let builder = if recording {
+            // Not a template icon, so macOS keeps it red.
+            builder.with_icon(tray_icon_image(true))
+        } else {
+            builder.with_icon_templated(tray_icon_image(false))
+        };
         #[cfg(not(target_os = "macos"))]
-        let builder = builder.with_icon(tray_icon_image());
+        let builder = builder.with_icon(tray_icon_image(recording));
         let icon = builder.build()?;
         Ok(Self { _icon: icon })
     }
@@ -63,15 +85,17 @@ impl Tray {
 
 /// A simple "selection corners + crosshair" glyph, drawn in code so the
 /// binary needs no image assets. Black on transparent so macOS can tint it.
-fn tray_icon_image() -> Icon {
+fn tray_icon_image(recording: bool) -> Icon {
     const S: usize = 32;
     // macOS tints template icons itself; elsewhere use a colour visible on light and dark bars.
     const INK: [u8; 4] = if cfg!(target_os = "macos") { [0, 0, 0, 255] } else { [0, 150, 230, 255] };
+    const RED: [u8; 4] = [230, 40, 40, 255];
+    let ink = if recording { RED } else { INK };
     let mut rgba = vec![0u8; S * S * 4];
     let mut set = |x: usize, y: usize| {
         if x < S && y < S {
             let i = (y * S + x) * 4;
-            rgba[i..i + 4].copy_from_slice(&INK);
+            rgba[i..i + 4].copy_from_slice(&ink);
         }
     };
     let (lo, hi, arm, t) = (3usize, 28usize, 8usize, 3usize);

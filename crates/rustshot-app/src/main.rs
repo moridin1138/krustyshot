@@ -8,6 +8,7 @@ mod fonts;
 mod hotkeys;
 mod overlay;
 mod platform;
+mod recording_ui;
 mod settings_ui;
 mod touchbar_guard;
 mod tray;

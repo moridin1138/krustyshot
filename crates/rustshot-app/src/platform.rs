@@ -60,6 +60,24 @@ pub fn window_number(title: &str) -> Option<isize> {
     }
 }
 
+/// Keep one of our windows out of screen captures and recordings, where
+/// the platform allows it (macOS). Used for the recording bar.
+pub fn exclude_from_capture(title: &str) {
+    #[cfg(target_os = "macos")]
+    {
+        use objc2_app_kit::{NSApplication, NSWindowSharingType};
+        use objc2_foundation::MainThreadMarker;
+        let Some(mtm) = MainThreadMarker::new() else { return };
+        for window in NSApplication::sharedApplication(mtm).windows().iter() {
+            if window.title().to_string() == title {
+                window.setSharingType(NSWindowSharingType::None);
+            }
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = title;
+}
+
 /// Show a file in Finder / Explorer / the file manager.
 pub fn reveal(path: &std::path::Path) {
     let result = if cfg!(target_os = "macos") {

@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-14
+
+Screen recording.
+
+### Added
+
+- Screen recording from the menu, matching the screenshot options: **Record region…** (drag an area), **Record window…** (click a window) and **Record full screen** (the display the pointer is on). The record shortcut (⌥⇧V on macOS, Ctrl+Shift+Print Screen elsewhere) starts a region recording or stops the current one. A small bar shows the time and size so far, with Stop and Discard (Discard asks for confirmation, since the video is deleted). On macOS the bar is hidden from the recording, and the menu-bar icon turns red while recording.
+- MP4 recordings on macOS (the system's own H.264 encoder) and GIF recordings on every platform. GIFs store only what changed between frames, so screen recordings stay small.
+- Recording settings: format, quality (Low, Medium, High), full or half resolution on Retina displays, frame rate, and an estimate of the size per minute.
+- Low disk space warning: when the disk holding your screenshots folder has 5% or less free, Rustshot warns before recording (and before screenshots, at most every 30 minutes), with options to continue, choose another folder, or cancel. Settings > Saving shows the free space.
+- A recording in progress stops and keeps what it has if the disk gets critically low (under 1% or 512 MB), and quitting Rustshot saves an active recording first.
+
 ## [0.3.0] - 2026-10-14
 
 Settings redesign and multilingual interface.
@@ -82,7 +94,8 @@ First release, licensed under GPL-3.0-or-later.
 - App icon, `cargo xtask icons` to regenerate it, and macOS bundle metadata.
 - CI on macOS, Windows and Linux, and a tag-driven release workflow.
 
-[Unreleased]: https://github.com/moridin1138/rustshot/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/moridin1138/rustshot/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/moridin1138/rustshot/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/moridin1138/rustshot/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/moridin1138/rustshot/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/moridin1138/rustshot/compare/v0.1.0...v0.1.1

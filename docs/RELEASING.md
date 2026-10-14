@@ -37,6 +37,7 @@ Every pull request or change that users would notice adds a line under `## [Unre
    - Each destination works: editor, clipboard, save directly, save as.
    - Every editor tool, undo and redo, crop, save, and copy (paste into Preview to check).
    - Settings: record a new shortcut and confirm it works straight away; toggle Open at login; Check for updates.
+   - Record a region, a window and a full display (MP4 and GIF); check Stop, Discard, the shortcut toggle, and that the recording bar isn't in the video. Play the files.
    - Open Mission Control on the desktop where Rustshot started: windows must look normal size, and no Rustshot window should appear.
    - Open and close the editor, Settings and notice windows several times, and cancel captures with Esc. Rustshot must not quit, and `~/Library/Logs/DiagnosticReports/` must have no new `rustshot-*.ips` file.
 3. **Choose the version** using the rules above.
@@ -44,12 +45,10 @@ Every pull request or change that users would notice adds a line under `## [Unre
 5. **Update CHANGELOG.md:**
    - Rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` and add a fresh empty `## [Unreleased]` above it.
    - Update the comparison links at the bottom.
-6. **Commit** the version bump: `git commit -am "Release vX.Y.Z"`.
-7. **Tag and push:**
-   ```bash
-   git tag -a vX.Y.Z -m "Rustshot vX.Y.Z"
-   git push origin main vX.Y.Z
-   ```
+6. **Commit and push** the version bump with the summary `Release vX.Y.Z`. In GitHub Desktop, check the Changes tab lists everything before committing. From a terminal: `git commit -am "Release vX.Y.Z" && git push`.
+7. **Wait for CI to pass on that commit, then tag it** `vX.Y.Z` (with the `v`) and push the tag:
+   - GitHub Desktop: History → right-click the commit → Create Tag… → Push origin.
+   - Terminal: `git tag -a vX.Y.Z -m "Rustshot vX.Y.Z" && git push origin vX.Y.Z`.
 8. **Review the draft release.** The [release workflow](../.github/workflows/release.yml) checks that the tag matches `Cargo.toml` and that the changelog has an entry, then builds:
    - `Rustshot-vX.Y.Z-macos-arm64.zip` and `-macos-x86_64.zip` (app bundles)
    - `Rustshot-vX.Y.Z-windows-x86_64.zip`
@@ -57,11 +56,13 @@ Every pull request or change that users would notice adds a line under `## [Unre
    - `SHA256SUMS.txt`
 
    It attaches them to a **draft** GitHub release, using the changelog section as the notes.
-9. **Test the downloaded build before publishing.** Download the macOS zip from the draft, unzip it, replace `/Applications/Rustshot.app`, open it from Finder, and repeat the permission, capture and window open/close checks from step 2. Only then click Publish. If anything fails, delete the draft and the tag, fix it, and start again.
+9. **Test the downloaded builds before publishing.** Download the macOS zip from the draft, unzip it, replace `/Applications/Rustshot.app`, open it from Finder, and repeat the permission, capture, recording and window open/close checks from step 2. If you can, also try the Windows zip (capture, editor, a GIF recording, Settings). Only then click Publish. If anything fails, delete the draft and the tag, fix it, and start again.
 
 ## If something goes wrong
 
-- **The workflow fails before building:** the tag and `Cargo.toml` disagree, or the changelog heading is missing. Delete the tag (`git tag -d vX.Y.Z && git push origin :vX.Y.Z`), fix it, and tag again.
+- **The workflow fails before building:** the tag and `Cargo.toml` disagree, or the changelog heading is missing. Delete the tag on GitHub (the repository's Tags page) and locally (`git tag -d vX.Y.Z`; GitHub Desktop can't delete a pushed tag), fix it, and tag again.
+- **The upload step fails ("other side closed" or similar):** the builds are fine. Delete the partial draft, then use **Re-run failed jobs** on the workflow run.
+- **Drafts don't show up when checking from a terminal:** drafts are only visible to accounts with write access; use the repository owner's login.
 - **A bad release has been published:** don't reuse its version number. Fix the problem and release the next patch version.
 
 ## macOS signing

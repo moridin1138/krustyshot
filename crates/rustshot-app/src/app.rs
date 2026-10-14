@@ -6,7 +6,8 @@ use std::time::{Duration, Instant};
 
 use chrono::{DateTime, Local};
 use global_hotkey::{GlobalHotKeyEvent, HotKeyState};
-use rustshot_core::{capture, output, permissions, Config, Destination, RgbaImage, TrayClick};
+use rustshot_core::recording::{CropRect, Recording, StopReason};
+use rustshot_core::{capture, disk, output, permissions, Config, Destination, Region, RgbaImage, TrayClick};
 use rustshot_editor::{Editor, EditorRequest};
 use tray_icon::menu::MenuEvent;
 use tray_icon::{MouseButton, MouseButtonState, TrayIconEvent};
@@ -14,7 +15,8 @@ use tray_icon::{MouseButton, MouseButtonState, TrayIconEvent};
 use crate::fonts;
 use rustshot_i18n::tr;
 use crate::hotkeys::HotkeyRegistry;
-use crate::overlay::{Outcome, Overlay};
+use crate::overlay::{Outcome, Overlay, Purpose};
+use crate::recording_ui::{ActiveRecording, BarAction};
 use crate::settings_ui::SettingsWindow;
 use crate::tray::{self, Tray};
 use crate::platform;
@@ -25,15 +27,26 @@ pub enum CaptureMode {
     Window,
     Fullscreen,
     LastRegion,
+    /// Screen recordings (each stops the current recording if one is running).
+    RecordRegion,
+    RecordWindow,
+    RecordFullscreen,
 }
 
 impl CaptureMode {
+    pub fn is_recording(self) -> bool {
+        matches!(self, CaptureMode::RecordRegion | CaptureMode::RecordWindow | CaptureMode::RecordFullscreen)
+    }
+
     pub fn label(self) -> String {
         match self {
             CaptureMode::Region => tr!("capture-region"),
             CaptureMode::Window => tr!("capture-window"),
             CaptureMode::Fullscreen => tr!("capture-fullscreen"),
             CaptureMode::LastRegion => tr!("capture-last-region"),
+            CaptureMode::RecordRegion => tr!("record-region"),
+            CaptureMode::RecordWindow => tr!("record-window"),
+            CaptureMode::RecordFullscreen => tr!("record-fullscreen"),
         }
     }
 }
@@ -98,6 +111,11 @@ pub struct App {
     stress: Option<(Instant, u64)>,
     toast: Option<Toast>,
     hotkeys_paused: bool,
+    overlay_purpose: Purpose,
+    recording: Option<ActiveRecording>,
+    /// When the low-disk warning was last shown for screenshots (it is
+    /// shown at most every 30 minutes for those; always for recordings).
+    last_disk_warning: Option<Instant>,
 }
 
 impl App {
@@ -137,7 +155,7 @@ impl App {
 
         let config = Config::load();
         rustshot_i18n::set_language(config.language.as_deref());
-        let tray = Tray::new(&config).map_err(|e| log::error!("tray icon: {e}")).ok();
+        let tray = Tray::new(&config, false).map_err(|e| log::error!("tray icon: {e}")).ok();
         let mut hotkeys = HotkeyRegistry::new();
         let hotkey_errors = hotkeys.register(&config.hotkeys);
         for e in &hotkey_errors {
@@ -163,6 +181,9 @@ impl App {
                 .then(|| (Instant::now() + Duration::from_secs(2), 0)),
             toast: None,
             hotkeys_paused: false,
+            overlay_purpose: Purpose::Screenshot,
+            recording: None,
+            last_disk_warning: None,
         };
 
         // Let macOS show its own permission prompt once (this also adds Rustshot
@@ -292,6 +313,154 @@ impl App {
         }
     }
 
+    /// Warn when the output folder's disk has 5% or less free. Returns false
+    /// if the user cancelled. Recordings always ask; screenshots at most
+    /// every 30 minutes, since they are small.
+    fn disk_space_ok(&mut self, recording: bool) -> bool {
+        for _ in 0..3 {
+            let Some(space) = disk::space_for(&self.config.output_dir) else { return true };
+            if !space.is_low() {
+                return true;
+            }
+            if !recording && self.last_disk_warning.is_some_and(|t| t.elapsed() < Duration::from_secs(30 * 60)) {
+                return true;
+            }
+            self.last_disk_warning = Some(Instant::now());
+            let (cont, change, cancel) = (tr!("disk-continue"), tr!("disk-change-folder"), tr!("button-cancel"));
+            platform::activate_app();
+            let answer = rfd::MessageDialog::new()
+                .set_level(rfd::MessageLevel::Warning)
+                .set_title(tr!("disk-low-title"))
+                .set_description(tr!(
+                    "disk-low-body",
+                    free = disk::format_bytes(space.available),
+                    percent = format!("{:.0}", space.fraction_free() * 100.0),
+                    folder = self.config.output_dir.display().to_string()
+                ))
+                .set_buttons(rfd::MessageButtons::YesNoCancelCustom(cont.clone(), change.clone(), cancel))
+                .show();
+            match answer {
+                rfd::MessageDialogResult::Custom(s) if s == cont => return true,
+                rfd::MessageDialogResult::Yes => return true,
+                rfd::MessageDialogResult::Custom(s) if s == change => {
+                    let Some(dir) = rfd::FileDialog::new().set_directory(&self.config.output_dir).pick_folder() else {
+                        return false;
+                    };
+                    self.config.output_dir = dir;
+                    if let Err(e) = self.config.save() {
+                        log::warn!("saving output folder: {e:#}");
+                    }
+                    // Check the new folder's disk too.
+                    self.last_disk_warning = None;
+                }
+                rfd::MessageDialogResult::No => {
+                    if let Some(dir) = rfd::FileDialog::new().set_directory(&self.config.output_dir).pick_folder() {
+                        self.config.output_dir = dir;
+                        let _ = self.config.save();
+                        self.last_disk_warning = None;
+                    } else {
+                        return false;
+                    }
+                }
+                _ => return false,
+            }
+        }
+        true
+    }
+
+    fn start_recording(&mut self, region: Region, target: Option<(u32, CropRect, f64)>, monitor: Option<Region>, title: &str) {
+        let Some((monitor_id, crop, scale)) = target else {
+            self.notice(&tr!("notice-recording-failed"), &tr!("recording-no-display"), false);
+            return;
+        };
+        let mut settings = self.config.recording.clone();
+        if !rustshot_core::recording::supports(settings.format) {
+            // Settings from another computer may ask for a format this one can't do.
+            settings.format = rustshot_core::VideoFormat::Gif;
+        }
+        let title = if title.trim().is_empty() { tr!("title-recording") } else { title.to_string() };
+        let stem = rustshot_core::filename::expand(
+            &self.config.filename_pattern,
+            &rustshot_core::filename::PatternContext { time: Local::now(), title: &title },
+        );
+        let path = output::unique_path(&self.config.output_dir, &stem, settings.format.extension());
+        match Recording::start(monitor_id, crop, scale, &settings, &path) {
+            Ok(recording) => {
+                self.recording = Some(ActiveRecording::new(recording, region, monitor));
+                self.rebuild_tray();
+            }
+            Err(e) => {
+                log::error!("recording: {e:#}");
+                self.notice(&tr!("notice-recording-failed"), &format!("{e:#}"), false);
+            }
+        }
+    }
+
+    fn finish_recording(&mut self, discard: bool) {
+        let Some(active) = self.recording.take() else { return };
+        let result = active.recording.finish(discard);
+        self.rebuild_tray();
+        log::info!(
+            "recording finished: {:?}, {} frames, {} dropped, {:.1}s",
+            result.reason,
+            result.frames,
+            result.dropped,
+            result.duration.as_secs_f64()
+        );
+        match result.reason {
+            StopReason::User | StopReason::DiskFull => {
+                if result.reason == StopReason::DiskFull {
+                    self.notice(&tr!("notice-disk-full-title"), &tr!("notice-disk-full-body"), false);
+                }
+                let name = result.path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                let size = std::fs::metadata(&result.path).map(|m| disk::format_bytes(m.len())).unwrap_or_default();
+                if self.config.copy_path_after_save {
+                    let _ = output::copy_text_to_clipboard(&result.path.display().to_string());
+                }
+                self.notify(&tr!("toast-recording-saved", name = name, size = size), Some(result.path));
+            }
+            StopReason::Cancelled => self.notify(&tr!("toast-recording-discarded"), None),
+            StopReason::Error(e) => self.notice(&tr!("notice-recording-failed"), &e, false),
+        }
+    }
+
+    fn show_recording(&mut self, ctx: &egui::Context) {
+        let Some(active) = &mut self.recording else { return };
+        if active.recording.stopped_by_itself() {
+            self.finish_recording(false);
+            return;
+        }
+        match active.show_bar(ctx) {
+            Some(BarAction::Stop) => self.finish_recording(false),
+            Some(BarAction::Discard) => {
+                // Deleting a recording can't be undone, so ask first. The
+                // recording keeps going while the question is open.
+                let (discard, keep) = (tr!("recording-discard"), tr!("recording-keep"));
+                platform::activate_app();
+                let answer = rfd::MessageDialog::new()
+                    .set_level(rfd::MessageLevel::Warning)
+                    .set_title(tr!("recording-discard-title"))
+                    .set_description(tr!("recording-discard-body"))
+                    .set_buttons(rfd::MessageButtons::OkCancelCustom(discard.clone(), keep))
+                    .show();
+                let confirmed = match answer {
+                    rfd::MessageDialogResult::Custom(s) => s == discard,
+                    rfd::MessageDialogResult::Ok => true,
+                    _ => false,
+                };
+                if confirmed {
+                    self.finish_recording(true);
+                }
+            }
+            None => {}
+        }
+    }
+
+    fn rebuild_tray(&mut self) {
+        self.tray = None;
+        self.tray = Tray::new(&self.config, self.recording.is_some()).map_err(|e| log::error!("tray icon: {e}")).ok();
+    }
+
     /// Explain how to grant Screen Recording access (shown at most once at a time).
     fn permission_notice(&mut self) {
         if self.notices.iter().any(|n| n.permission) {
@@ -305,7 +474,11 @@ impl App {
             match ev {
                 AppEvent::Hotkey(id) => {
                     if let Some(mode) = self.hotkeys.mode_for(id) {
-                        self.request_capture(mode, false, ctx);
+                        if mode.is_recording() && self.recording.is_some() {
+                            self.finish_recording(false);
+                        } else {
+                            self.request_capture(mode, false, ctx);
+                        }
                     }
                 }
                 AppEvent::Menu(id) => self.handle_menu(&id, ctx),
@@ -340,6 +513,10 @@ impl App {
             tray::CAPTURE_WINDOW => self.request_capture(CaptureMode::Window, true, ctx),
             tray::CAPTURE_FULLSCREEN => self.request_capture(CaptureMode::Fullscreen, true, ctx),
             tray::CAPTURE_LAST_REGION => self.request_capture(CaptureMode::LastRegion, true, ctx),
+            tray::RECORD_REGION => self.request_capture(CaptureMode::RecordRegion, true, ctx),
+            tray::RECORD_WINDOW => self.request_capture(CaptureMode::RecordWindow, true, ctx),
+            tray::RECORD_FULLSCREEN => self.request_capture(CaptureMode::RecordFullscreen, true, ctx),
+            tray::RECORD_STOP => self.finish_recording(false),
             tray::OPEN_CLIPBOARD => match output::image_from_clipboard() {
                 Some(img) => self.open_editor(img, &tr!("title-clipboard"), Local::now()),
                 None => self.notice(&tr!("title-clipboard"), &tr!("notice-no-clipboard-image"), false),
@@ -414,10 +591,41 @@ impl App {
             ctx.request_repaint();
             return;
         }
+        if mode.is_recording() && self.recording.is_some() {
+            return;
+        }
+        if !self.disk_space_ok(mode.is_recording()) {
+            return;
+        }
         let result = match mode {
             CaptureMode::Region | CaptureMode::Window => capture::take_snapshot(self.snapshot_options(true)).map(|snap| {
-                self.overlay = Some(Overlay::new(snap, mode == CaptureMode::Window, self.config.show_magnifier));
+                self.overlay_purpose = Purpose::Screenshot;
+                self.overlay = Some(Overlay::new(snap, mode == CaptureMode::Window, self.config.show_magnifier, Purpose::Screenshot));
             }),
+            CaptureMode::RecordRegion | CaptureMode::RecordWindow => {
+                // The pointer is drawn live in recordings, not frozen in the overlay.
+                let opts = capture::SnapshotOptions { windows: true, pointer: false };
+                capture::take_snapshot(opts).map(|snap| {
+                    self.overlay_purpose = Purpose::Recording;
+                    let window_mode = mode == CaptureMode::RecordWindow;
+                    self.overlay = Some(Overlay::new(snap, window_mode, self.config.show_magnifier, Purpose::Recording));
+                })
+            }
+            CaptureMode::RecordFullscreen => {
+                // The whole display the pointer is on (recordings use one display).
+                capture::take_snapshot(capture::SnapshotOptions { windows: false, pointer: false }).map(|snap| {
+                    let display = snap
+                        .pointer
+                        .and_then(|(x, y)| snap.monitor_at(x, y))
+                        .or_else(|| snap.monitors.iter().find(|m| m.is_primary))
+                        .or_else(|| snap.monitors.first())
+                        .map(|m| m.rect);
+                    if let Some(rect) = display {
+                        let target = snap.recording_target(&rect);
+                        self.start_recording(rect, target, Some(rect), &tr!("title-full-screen"));
+                    }
+                })
+            }
             CaptureMode::Fullscreen => capture::take_snapshot(self.snapshot_options(false)).map(|snap| {
                 if let Some(image) = snap.stitch_all() {
                     self.deliver(Capture { image, title: tr!("title-full-screen"), taken_at: snap.taken_at });
@@ -499,7 +707,11 @@ impl App {
         let Some(outcome) = overlay.show(ctx) else { return };
         let taken_at = overlay.taken_at();
         self.overlay = None;
-        if let Outcome::Captured { image, title, region } = outcome {
+        if let Outcome::Captured { image, title, region, target, monitor } = outcome {
+            if self.overlay_purpose == Purpose::Recording {
+                self.start_recording(region, target, monitor, &title);
+                return;
+            }
             self.config.last_region = Some(region);
             if let Err(e) = self.config.save() {
                 log::warn!("saving last region: {e:#}");
@@ -651,7 +863,7 @@ impl App {
             if tray_changed {
                 // Rebuild the tray so menu shortcuts and click behaviour match.
                 self.tray = None;
-                self.tray = Tray::new(&self.config).map_err(|e| log::error!("tray icon: {e}")).ok();
+                self.tray = Tray::new(&self.config, self.recording.is_some()).map_err(|e| log::error!("tray icon: {e}")).ok();
             }
         }
         // Pause global hotkeys while a new shortcut is being recorded, so
@@ -804,6 +1016,8 @@ impl eframe::App for App {
         self.handle_events(ctx);
         self.stress_step(ctx);
         if self.quit {
+            // Never lose a recording by quitting: finish and save it first.
+            self.finish_recording(false);
             ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, egui::ViewportCommand::Close);
         }
     }
@@ -816,6 +1030,7 @@ impl eframe::App for App {
             self.background_hidden = true;
         }
         self.show_overlay(&ctx);
+        self.show_recording(&ctx);
         self.show_picker(&ctx);
         self.show_editors(&ctx);
         self.show_settings(&ctx);

@@ -7,7 +7,7 @@ use egui_phosphor::regular as icon;
 use rustshot_core::config::Hotkeys;
 use rustshot_core::filename::{self, PatternContext};
 use rustshot_core::update::{self, UpdateStatus};
-use rustshot_core::{autostart, Config, Destination, OutputFormat, TrayClick};
+use rustshot_core::{autostart, disk, recording, Config, Destination, OutputFormat, TrayClick, VideoFormat, VideoQuality};
 
 use crate::{hotkeys, platform};
 use rustshot_i18n::tr;
@@ -16,18 +16,21 @@ use rustshot_i18n::tr;
 enum Section {
     General,
     Capture,
+    Recording,
     Shortcuts,
     Saving,
     About,
 }
 
 impl Section {
-    const ALL: [Section; 5] = [Section::General, Section::Capture, Section::Shortcuts, Section::Saving, Section::About];
+    const ALL: [Section; 6] =
+        [Section::General, Section::Capture, Section::Recording, Section::Shortcuts, Section::Saving, Section::About];
 
     fn label(self) -> String {
         match self {
             Section::General => tr!("settings-general"),
             Section::Capture => tr!("settings-capture"),
+            Section::Recording => tr!("settings-recording"),
             Section::Shortcuts => tr!("settings-shortcuts"),
             Section::Saving => tr!("settings-saving"),
             Section::About => tr!("settings-about"),
@@ -39,6 +42,7 @@ impl Section {
         match self {
             Section::General => "general",
             Section::Capture => "capture",
+            Section::Recording => "recording",
             Section::Shortcuts => "shortcuts",
             Section::Saving => "saving",
             Section::About => "about",
@@ -49,6 +53,7 @@ impl Section {
         match self {
             Section::General => icon::SLIDERS_HORIZONTAL,
             Section::Capture => icon::CROP,
+            Section::Recording => icon::VIDEO_CAMERA,
             Section::Shortcuts => icon::KEYBOARD,
             Section::Saving => icon::FOLDER,
             Section::About => icon::INFO,
@@ -62,10 +67,12 @@ enum HotkeyField {
     Window,
     Fullscreen,
     LastRegion,
+    Record,
 }
 
 impl HotkeyField {
-    const ALL: [HotkeyField; 4] = [HotkeyField::Region, HotkeyField::Window, HotkeyField::Fullscreen, HotkeyField::LastRegion];
+    const ALL: [HotkeyField; 5] =
+        [HotkeyField::Region, HotkeyField::Window, HotkeyField::Fullscreen, HotkeyField::LastRegion, HotkeyField::Record];
 
     fn label(self) -> String {
         match self {
@@ -73,6 +80,7 @@ impl HotkeyField {
             HotkeyField::Window => tr!("capture-window"),
             HotkeyField::Fullscreen => tr!("capture-fullscreen"),
             HotkeyField::LastRegion => tr!("capture-last-region"),
+            HotkeyField::Record => tr!("shortcut-record"),
         }
     }
 
@@ -82,6 +90,7 @@ impl HotkeyField {
             HotkeyField::Window => &mut h.window,
             HotkeyField::Fullscreen => &mut h.fullscreen,
             HotkeyField::LastRegion => &mut h.last_region,
+            HotkeyField::Record => &mut h.record,
         }
     }
 }
@@ -112,6 +121,8 @@ pub struct SettingsWindow {
     autostart: bool,
     autostart_error: Option<String>,
     update: Arc<Mutex<UpdateCheck>>,
+    /// Primary display size in pixels and its scale, for size estimates.
+    display: Option<(u32, u32, f64)>,
     /// Debug builds: RUSTSHOT_SETTINGS_TOUR=<dir> saves a picture of each
     /// section (just this window), for reviewing the design.
     tour: Option<Tour>,
@@ -136,6 +147,7 @@ impl SettingsWindow {
             autostart: autostart::is_enabled(),
             autostart_error: None,
             update: Arc::default(),
+            display: rustshot_core::capture::primary_display_pixels(),
             tour: cfg!(debug_assertions)
                 .then(|| std::env::var_os("RUSTSHOT_SETTINGS_TOUR"))
                 .flatten()
@@ -204,6 +216,7 @@ impl SettingsWindow {
                         match self.section {
                             Section::General => self.general(ui, &mut draft),
                             Section::Capture => capture(ui, &mut draft),
+                            Section::Recording => recording(ui, &mut draft, self.display),
                             Section::Shortcuts => self.shortcuts(ui, &mut draft, hotkey_errors),
                             Section::Saving => saving(ui, &mut draft),
                             Section::About => self.about(ui, &mut draft),
@@ -502,6 +515,66 @@ fn capture(ui: &mut Ui, d: &mut Config) {
     });
 }
 
+fn recording(ui: &mut Ui, d: &mut Config, display: Option<(u32, u32, f64)>) {
+    let r = &mut d.recording;
+    let mp4_available = recording::supports(VideoFormat::Mp4);
+    group(ui, |ui| {
+        row(ui, &tr!("rec-format"), None, |ui| {
+            let mut options = vec![(VideoFormat::Gif, "GIF".to_string())];
+            if mp4_available {
+                options.insert(0, (VideoFormat::Mp4, "MP4".to_string()));
+            }
+            segmented(ui, &mut r.format, &options);
+        });
+        let hint = match r.format {
+            VideoFormat::Mp4 => tr!("rec-format-mp4-hint"),
+            VideoFormat::Gif if mp4_available => tr!("rec-format-gif-hint"),
+            VideoFormat::Gif => tr!("rec-format-gif-only-hint"),
+        };
+        ui.label(RichText::new(hint).small().weak());
+        ui.add_space(4.0);
+        divider(ui);
+        if r.format == VideoFormat::Mp4 {
+            row(ui, &tr!("rec-quality"), Some(&tr!("rec-quality-sub")), |ui| {
+                let options: Vec<(VideoQuality, String)> = VideoQuality::ALL
+                    .iter()
+                    .map(|q| {
+                        (*q, match q {
+                            VideoQuality::Low => tr!("rec-quality-low"),
+                            VideoQuality::Medium => tr!("rec-quality-medium"),
+                            VideoQuality::High => tr!("rec-quality-high"),
+                        })
+                    })
+                    .collect();
+                segmented(ui, &mut r.quality, &options);
+            });
+            divider(ui);
+        }
+        row(ui, &tr!("rec-full-resolution"), Some(&tr!("rec-full-resolution-sub")), |ui| {
+            toggle(ui, &mut r.full_resolution);
+        });
+        divider(ui);
+        row(ui, &tr!("rec-fps"), None, |ui| {
+            let choices: &[u32] = if r.format == VideoFormat::Gif { &[10, 15] } else { &[15, 30, 60] };
+            let mut options: Vec<(u32, String)> = choices.iter().map(|f| (*f, tr!("rec-fps-value", fps = *f))).collect();
+            if !choices.contains(&r.effective_fps()) {
+                options.push((r.fps, tr!("rec-fps-value", fps = r.effective_fps())));
+            }
+            segmented(ui, &mut r.fps, &options);
+        });
+        if let Some((w, h, scale)) = display {
+            divider(ui);
+            let per_minute = disk::format_bytes(r.bytes_per_minute(w, h, scale));
+            let (ow, oh) = r.output_size(w, h, scale);
+            ui.add_space(4.0);
+            ui.label(format!("{}  {}", icon::HARD_DRIVES, tr!("rec-estimate", size = per_minute)));
+            ui.label(RichText::new(tr!("rec-estimate-sub", width = ow, height = oh, fps = r.effective_fps())).small().weak());
+            ui.add_space(4.0);
+        }
+    });
+    ui.weak(tr!("rec-shortcut-hint"));
+}
+
 fn saving(ui: &mut Ui, d: &mut Config) {
     group(ui, |ui| {
         row(ui, &tr!("settings-folder"), None, |ui| {
@@ -516,6 +589,24 @@ fn saving(ui: &mut Ui, d: &mut Config) {
             }
             ui.add(egui::Label::new(RichText::new(short_path(&d.output_dir)).weak()).truncate());
         });
+        if let Some(space) = disk::space_for(&d.output_dir) {
+            let text = tr!(
+                "settings-free-space-value",
+                free = disk::format_bytes(space.available),
+                total = disk::format_bytes(space.total),
+                percent = format!("{:.0}", space.fraction_free() * 100.0)
+            );
+            row(ui, &tr!("settings-free-space"), None, |ui| {
+                if space.is_low() {
+                    ui.colored_label(ui.visuals().warn_fg_color, format!("{} {text}", icon::WARNING));
+                } else {
+                    ui.weak(text);
+                }
+            });
+            if space.is_low() {
+                ui.label(RichText::new(tr!("settings-free-space-low")).small().color(ui.visuals().warn_fg_color));
+            }
+        }
         divider(ui);
         ui.add_space(6.0);
         ui.label(tr!("settings-file-name"));

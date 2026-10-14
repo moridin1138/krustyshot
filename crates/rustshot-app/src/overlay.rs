@@ -4,6 +4,7 @@
 //! Greenshot.
 
 use egui::{Align2, Color32, FontId, Key, Pos2, Rect, Stroke, StrokeKind, TextureHandle, TextureOptions, Vec2};
+use rustshot_core::recording::CropRect;
 use rustshot_core::{RgbaImage, Region, Snapshot};
 use rustshot_i18n::tr;
 
@@ -11,7 +12,22 @@ use crate::platform;
 
 pub enum Outcome {
     Cancelled,
-    Captured { image: RgbaImage, title: String, region: Region },
+    Captured {
+        image: RgbaImage,
+        title: String,
+        region: Region,
+        /// For recordings: display id, area in its pixels, and its scale.
+        target: Option<(u32, CropRect, f64)>,
+        /// Bounds of the display the region is on.
+        monitor: Option<Region>,
+    },
+}
+
+/// What the selection is for (changes the help text).
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Purpose {
+    Screenshot,
+    Recording,
 }
 
 pub struct Overlay {
@@ -27,12 +43,13 @@ pub struct Overlay {
     cursor: Option<(f64, f64)>,
     frames: u32,
     outcome: Option<Outcome>,
+    purpose: Purpose,
 }
 
 const ACCENT: Color32 = Color32::from_rgb(0, 170, 255);
 
 impl Overlay {
-    pub fn new(snapshot: Snapshot, window_mode: bool, show_magnifier: bool) -> Self {
+    pub fn new(snapshot: Snapshot, window_mode: bool, show_magnifier: bool, purpose: Purpose) -> Self {
         let textures = snapshot.monitors.iter().map(|_| None).collect();
         Self {
             snapshot,
@@ -44,6 +61,7 @@ impl Overlay {
             cursor: None,
             frames: 0,
             outcome: None,
+            purpose,
         }
     }
 
@@ -93,8 +111,10 @@ impl Overlay {
     }
 
     fn finish(&mut self, region: Region, title: String) {
+        let target = self.snapshot.recording_target(&region);
+        let monitor = self.snapshot.monitor_for(&region).map(|m| m.rect);
         self.outcome = Some(match self.snapshot.crop(&region) {
-            Some(image) => Outcome::Captured { image, title, region },
+            Some(image) => Outcome::Captured { image, title, region, target, monitor },
             None => Outcome::Cancelled,
         });
     }
@@ -240,10 +260,11 @@ impl Overlay {
         // Instructions at the top of the monitor with the cursor (or primary).
         let show_help = cursor_here.is_some() || (self.cursor.is_none() && is_primary);
         if show_help {
-            let text = if self.window_mode {
-                tr!("overlay-help-window")
-            } else {
-                tr!("overlay-help-region")
+            let text = match (self.purpose, self.window_mode) {
+                (Purpose::Recording, true) => tr!("overlay-record-help-window"),
+                (Purpose::Recording, false) => tr!("overlay-record-help-region"),
+                (Purpose::Screenshot, true) => tr!("overlay-help-window"),
+                (Purpose::Screenshot, false) => tr!("overlay-help-region"),
             };
             pill(painter, Pos2::new(screen.center().x, screen.min.y + 40.0), Align2::CENTER_TOP, &text);
         }

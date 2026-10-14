@@ -7,6 +7,10 @@ capture-fullscreen = Capture full screen
 capture-last-region = Capture last region
 capture-region = Capture region
 capture-window = Capture window
+record-fullscreen = Record full screen
+record-region = Record region…
+record-stop = Stop recording
+record-window = Record window…
 
 ## Menu-bar / tray menu
 
@@ -31,10 +35,56 @@ picker-heading = Screenshot { $width } × { $height }
 
 overlay-help-region = Drag to select a region  ·  Click a window to capture it  ·  Space: window mode  ·  Esc: cancel
 overlay-help-window = Click a window to capture it  ·  Space: region mode  ·  Esc: cancel
+overlay-record-help-region = Record: drag a region  ·  Click a window or the desktop  ·  Space: window mode  ·  Esc: cancel
+overlay-record-help-window = Record: click a window  ·  Space: region mode  ·  Esc: cancel
+
+## Recording
+
+recording-bar-title = Rustshot Recording
+recording-discard = Discard
+recording-discard-body = The recording will stop and the video will be deleted. This can't be undone.
+recording-discard-tip = Stop and discard this recording
+recording-discard-title = Discard this recording?
+recording-keep = Keep recording
+recording-no-display = Couldn't tell which display to record. Try again.
+recording-stop = Stop
+
+## Settings: recording
+
+rec-estimate = Up to about { $size } per minute for a full-screen recording
+rec-estimate-sub = { $width } × { $height } at { $fps } fps on your main display. Quiet screens and smaller areas use much less.
+rec-format = Format
+rec-format-gif-hint = GIF: plays anywhere, including chat apps and web pages, but files grow quickly. Best for short clips.
+rec-format-gif-only-hint = MP4 recording is coming to this platform; for now recordings are GIFs, which suit short clips.
+rec-format-mp4-hint = MP4: small files, smooth video. Best for anything longer than a few seconds.
+rec-fps = Frame rate
+rec-fps-value = { $fps } fps
+rec-full-resolution = Full resolution
+rec-full-resolution-sub = On high-resolution (Retina) displays. Off looks the same at normal size and takes about a quarter of the space.
+rec-quality = Quality
+rec-quality-high = High
+rec-quality-low = Low
+rec-quality-medium = Medium
+rec-quality-sub = Higher quality uses more disk space
+rec-shortcut-hint = Start and stop recordings from the menu or with the shortcut set in Shortcuts.
+
+## Disk space
+
+disk-change-folder = Change folder…
+disk-continue = Continue anyway
+disk-low-body =
+    Only { $free } ({ $percent }%) is free on the disk where Rustshot saves screenshots and recordings:
+
+    { $folder }
+
+    Saving may fail when the disk fills up. Free up space, or choose a folder on another disk.
+disk-low-title = Low disk space
 
 ## Notifications
 
 toast-copied = Copied to clipboard
+toast-recording-discarded = Recording discarded
+toast-recording-saved = Saved { $name } ({ $size })
 toast-saved = Saved { $name }
 toast-show-file = Click to show the file
 toast-show-finder = Click to show in Finder
@@ -42,6 +92,8 @@ toast-show-finder = Click to show in Finder
 ## Messages
 
 notice-capture-failed = Capture failed
+notice-disk-full-body = The disk was almost full, so Rustshot stopped recording and saved what it had. Free up space before recording again.
+notice-disk-full-title = Recording stopped
 notice-hotkeys-body =
     Some shortcuts could not be registered (another app may be using them):
 
@@ -51,6 +103,7 @@ notice-hotkeys-body =
 notice-hotkeys-title = Shortcuts
 notice-no-clipboard-image = There is no image on the clipboard.
 notice-open-image = Open image
+notice-recording-failed = Recording failed
 
 ## Screen Recording permission (macOS)
 
@@ -87,6 +140,7 @@ about-settings-file = Settings file
 
 title-clipboard = Clipboard
 title-full-screen = Full screen
+title-recording = Recording
 title-screenshot = Screenshot
 
 ## Editor status bar
@@ -197,6 +251,9 @@ settings-example = Example: { $name }
 settings-file-name = File name
 settings-folder = Folder
 settings-format = Format
+settings-free-space = Free space
+settings-free-space-low = This disk is nearly full. Rustshot will warn before capturing; consider a folder on another disk.
+settings-free-space-value = { $free } of { $total } ({ $percent }%)
 settings-general = General
 settings-icon-click = Clicking the icon
 settings-jpeg-quality = JPEG quality
@@ -210,6 +267,7 @@ settings-off = Off
 settings-open-at-login = Open at login
 settings-otherwise-always = Otherwise, always:
 settings-pointer = Include the mouse pointer
+settings-recording = Recording
 settings-right-click-hint = Right-click the icon for the menu.
 settings-saving = Saving
 settings-seconds = { $n } s
@@ -229,6 +287,7 @@ shortcut-need-modifier = Include a modifier key: Ctrl, Alt, Shift or Win.
 shortcut-need-modifier-mac = Include a modifier key: Option, Control, Shift or Command.
 shortcut-none = None
 shortcut-press-keys = Press keys…
+shortcut-record = Start or stop recording
 shortcut-restore = Restore default shortcuts
 shortcut-tip = Click, then press the new shortcut
 

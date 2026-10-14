@@ -7,6 +7,10 @@ capture-fullscreen = Capturar pantalla completa
 capture-last-region = Capturar la última zona
 capture-region = Capturar una zona
 capture-window = Capturar una ventana
+record-fullscreen = Grabar pantalla completa
+record-region = Grabar una zona…
+record-stop = Detener grabación
+record-window = Grabar una ventana…
 
 ## Menu-bar / tray menu
 
@@ -31,10 +35,56 @@ picker-heading = Captura { $width } × { $height }
 
 overlay-help-region = Arrastra para elegir una zona  ·  Haz clic en una ventana para capturarla  ·  Espacio: modo ventana  ·  Esc: cancelar
 overlay-help-window = Haz clic en una ventana para capturarla  ·  Espacio: modo zona  ·  Esc: cancelar
+overlay-record-help-region = Grabar: arrastra para elegir una zona  ·  Haz clic en una ventana o en el escritorio  ·  Espacio: modo ventana  ·  Esc: cancelar
+overlay-record-help-window = Grabar: haz clic en una ventana  ·  Espacio: modo zona  ·  Esc: cancelar
+
+## Recording
+
+recording-bar-title = Grabación de Rustshot
+recording-discard = Descartar
+recording-discard-body = La grabación se detendrá y el vídeo se eliminará. No se puede deshacer.
+recording-discard-tip = Detener y descartar esta grabación
+recording-discard-title = ¿Descartar esta grabación?
+recording-keep = Seguir grabando
+recording-no-display = No se pudo saber qué pantalla grabar. Inténtalo de nuevo.
+recording-stop = Detener
+
+## Settings: recording
+
+rec-estimate = Hasta unos { $size } por minuto en una grabación de pantalla completa
+rec-estimate-sub = { $width } × { $height } a { $fps } fps en tu pantalla principal. Las pantallas con poco movimiento y las zonas más pequeñas ocupan mucho menos.
+rec-format = Formato
+rec-format-gif-hint = GIF: se reproduce en cualquier sitio, incluidas apps de chat y páginas web, pero los archivos crecen rápido. Ideal para clips cortos.
+rec-format-gif-only-hint = La grabación en MP4 llegará pronto a esta plataforma; por ahora las grabaciones son GIF, ideales para clips cortos.
+rec-format-mp4-hint = MP4: archivos pequeños y vídeo fluido. Ideal para cualquier cosa de más de unos segundos.
+rec-fps = Fotogramas por segundo
+rec-fps-value = { $fps } fps
+rec-full-resolution = Resolución completa
+rec-full-resolution-sub = En pantallas de alta resolución (Retina). Desactivada se ve igual a tamaño normal y ocupa aproximadamente una cuarta parte.
+rec-quality = Calidad
+rec-quality-high = Alta
+rec-quality-low = Baja
+rec-quality-medium = Media
+rec-quality-sub = Más calidad ocupa más espacio en disco
+rec-shortcut-hint = Inicia y detén las grabaciones desde el menú o con el atajo definido en Atajos.
+
+## Disk space
+
+disk-change-folder = Cambiar carpeta…
+disk-continue = Continuar de todos modos
+disk-low-body =
+    Solo quedan { $free } ({ $percent } %) libres en el disco donde Rustshot guarda capturas y grabaciones:
+
+    { $folder }
+
+    Puede que no se pueda guardar cuando el disco se llene. Libera espacio o elige una carpeta en otro disco.
+disk-low-title = Poco espacio en disco
 
 ## Notifications
 
 toast-copied = Copiado al portapapeles
+toast-recording-discarded = Grabación descartada
+toast-recording-saved = { $name } guardado ({ $size })
 toast-saved = { $name } guardado
 toast-show-file = Haz clic para mostrar el archivo
 toast-show-finder = Haz clic para mostrarlo en el Finder
@@ -42,6 +92,8 @@ toast-show-finder = Haz clic para mostrarlo en el Finder
 ## Messages
 
 notice-capture-failed = No se pudo capturar
+notice-disk-full-body = El disco estaba casi lleno, así que Rustshot detuvo la grabación y guardó lo que tenía. Libera espacio antes de volver a grabar.
+notice-disk-full-title = Grabación detenida
 notice-hotkeys-body =
     No se pudieron registrar algunos atajos (puede que otra app los esté usando):
 
@@ -51,6 +103,7 @@ notice-hotkeys-body =
 notice-hotkeys-title = Atajos
 notice-no-clipboard-image = No hay ninguna imagen en el portapapeles.
 notice-open-image = Abrir imagen
+notice-recording-failed = No se pudo grabar
 
 ## Screen Recording permission (macOS)
 
@@ -87,6 +140,7 @@ about-settings-file = Archivo de ajustes
 
 title-clipboard = Portapapeles
 title-full-screen = Pantalla completa
+title-recording = Grabación
 title-screenshot = Captura de pantalla
 
 ## Editor status bar
@@ -197,6 +251,9 @@ settings-example = Ejemplo: { $name }
 settings-file-name = Nombre del archivo
 settings-folder = Carpeta
 settings-format = Formato
+settings-free-space = Espacio libre
+settings-free-space-low = Este disco está casi lleno. Rustshot avisará antes de capturar; plantéate usar una carpeta en otro disco.
+settings-free-space-value = { $free } de { $total } ({ $percent } %)
 settings-general = General
 settings-icon-click = Al hacer clic en el icono
 settings-jpeg-quality = Calidad JPEG
@@ -210,6 +267,7 @@ settings-off = No
 settings-open-at-login = Abrir al iniciar sesión
 settings-otherwise-always = Si no, siempre:
 settings-pointer = Incluir el puntero del ratón
+settings-recording = Grabación
 settings-right-click-hint = Haz clic derecho en el icono para ver el menú.
 settings-saving = Guardado
 settings-seconds = { $n } s
@@ -229,6 +287,7 @@ shortcut-need-modifier = Incluye una tecla modificadora: Ctrl, Alt, Mayús o Win
 shortcut-need-modifier-mac = Incluye una tecla modificadora: Opción, Control, Mayúsculas o Comando.
 shortcut-none = Ninguno
 shortcut-press-keys = Pulsa las teclas…
+shortcut-record = Iniciar o detener la grabación
 shortcut-restore = Restaurar los atajos predeterminados
 shortcut-tip = Haz clic y pulsa el nuevo atajo
 

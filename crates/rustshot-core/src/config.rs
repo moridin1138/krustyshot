@@ -107,6 +107,111 @@ impl TrayClick {
     }
 }
 
+/// Container for recordings.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum VideoFormat {
+    /// H.264 video, using the operating system's encoder.
+    Mp4,
+    /// Animated GIF: works everywhere, best for short clips.
+    Gif,
+}
+
+impl VideoFormat {
+    pub fn extension(self) -> &'static str {
+        match self {
+            VideoFormat::Mp4 => "mp4",
+            VideoFormat::Gif => "gif",
+        }
+    }
+}
+
+/// Encoding quality; trades file size for sharpness.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum VideoQuality {
+    Low,
+    Medium,
+    High,
+}
+
+impl VideoQuality {
+    pub const ALL: [VideoQuality; 3] = [VideoQuality::Low, VideoQuality::Medium, VideoQuality::High];
+
+    /// H.264 bits per pixel per frame. Screen content compresses well, so
+    /// these are lower than typical camera-video figures.
+    pub fn bits_per_pixel(self) -> f64 {
+        match self {
+            VideoQuality::Low => 0.04,
+            VideoQuality::Medium => 0.08,
+            VideoQuality::High => 0.15,
+        }
+    }
+}
+
+/// Recording settings.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct RecordingSettings {
+    pub format: VideoFormat,
+    pub quality: VideoQuality,
+    /// Record at full Retina resolution instead of half.
+    pub full_resolution: bool,
+    pub fps: u32,
+}
+
+impl Default for RecordingSettings {
+    fn default() -> Self {
+        Self {
+            format: if cfg!(target_os = "macos") { VideoFormat::Mp4 } else { VideoFormat::Gif },
+            quality: VideoQuality::Medium,
+            full_resolution: false,
+            fps: 30,
+        }
+    }
+}
+
+impl RecordingSettings {
+    /// GIFs are capped at 15 fps: more mostly just grows the file.
+    pub const GIF_MAX_FPS: u32 = 15;
+    /// GIF frames are scaled down to at most this width.
+    pub const GIF_MAX_WIDTH: u32 = 1280;
+
+    pub fn effective_fps(&self) -> u32 {
+        match self.format {
+            VideoFormat::Mp4 => self.fps.clamp(5, 60),
+            VideoFormat::Gif => self.fps.clamp(5, Self::GIF_MAX_FPS),
+        }
+    }
+
+    /// Output size for a recording area of `w`×`h` pixels on a display with
+    /// `scale` pixels per point (2 on Retina). Always even, as H.264 needs.
+    pub fn output_size(&self, w: u32, h: u32, scale: f64) -> (u32, u32) {
+        let mut f = if self.full_resolution || scale <= 1.0 { 1.0 } else { 1.0 / scale };
+        if self.format == VideoFormat::Gif && (w as f64 * f) > Self::GIF_MAX_WIDTH as f64 {
+            f = Self::GIF_MAX_WIDTH as f64 / w as f64;
+        }
+        let even = |v: f64| ((v.round() as u32) & !1).max(2);
+        (even(w as f64 * f), even(h as f64 * f))
+    }
+
+    /// H.264 target bit rate for an output of `w`×`h`.
+    pub fn bit_rate(&self, w: u32, h: u32) -> u64 {
+        (w as f64 * h as f64 * self.effective_fps() as f64 * self.quality.bits_per_pixel()) as u64
+    }
+
+    /// Rough bytes per minute for recording `w`×`h` pixels on a display with
+    /// `scale` pixels per point, for showing people the cost up front. MP4
+    /// follows the bit rate; GIF is a rough empirical figure for screen content.
+    pub fn bytes_per_minute(&self, w: u32, h: u32, scale: f64) -> u64 {
+        let (ow, oh) = self.output_size(w, h, scale);
+        match self.format {
+            VideoFormat::Mp4 => self.bit_rate(ow, oh) * 60 / 8,
+            VideoFormat::Gif => (ow as f64 * oh as f64 * self.effective_fps() as f64 * 60.0 * 0.12) as u64,
+        }
+    }
+}
+
 /// Global hotkeys in `global-hotkey` syntax, e.g. `"alt+shift+KeyR"`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -115,6 +220,8 @@ pub struct Hotkeys {
     pub window: String,
     pub fullscreen: String,
     pub last_region: String,
+    /// Start recording (pressed again: stop).
+    pub record: String,
 }
 
 impl Default for Hotkeys {
@@ -126,6 +233,7 @@ impl Default for Hotkeys {
                 window: "alt+shift+KeyW".into(),
                 fullscreen: "alt+shift+KeyF".into(),
                 last_region: "alt+shift+KeyL".into(),
+                record: "alt+shift+KeyV".into(),
             }
         } else {
             // Greenshot's defaults.
@@ -134,6 +242,7 @@ impl Default for Hotkeys {
                 window: "alt+PrintScreen".into(),
                 fullscreen: "control+PrintScreen".into(),
                 last_region: "shift+PrintScreen".into(),
+                record: "control+shift+PrintScreen".into(),
             }
         }
     }
@@ -161,6 +270,7 @@ pub struct Config {
     pub notifications: bool,
     /// Left click on the tray icon. (Right click always opens the menu.)
     pub tray_click: TrayClick,
+    pub recording: RecordingSettings,
     /// Interface language code (`en`, `fr`, …); `None` follows the system.
     pub language: Option<String>,
     /// Region used by "Capture last region".
@@ -185,6 +295,7 @@ impl Default for Config {
             capture_delay_secs: 0,
             notifications: true,
             tray_click: TrayClick::ShowMenu,
+            recording: RecordingSettings::default(),
             language: None,
             last_region: None,
         }
@@ -234,6 +345,21 @@ mod tests {
         };
         let text = toml::to_string_pretty(&c).unwrap();
         assert_eq!(toml::from_str::<Config>(&text).unwrap(), c);
+    }
+
+    #[test]
+    fn recording_sizes_and_rates() {
+        let r = RecordingSettings { format: VideoFormat::Mp4, quality: VideoQuality::Medium, full_resolution: false, fps: 30 };
+        // Half resolution on Retina, even dimensions.
+        assert_eq!(r.output_size(2940, 1913, 2.0), (1470, 956));
+        assert_eq!(RecordingSettings { full_resolution: true, ..r.clone() }.output_size(2940, 1912, 2.0), (2940, 1912));
+        // Medium at 1470x956x30fps is about 3.4 Mbit/s, about 25 MB a minute.
+        let mb = r.bytes_per_minute(2940, 1912, 2.0) as f64 / 1e6;
+        assert!((24.0..27.0).contains(&mb), "{mb}");
+        // GIF: capped frame rate and width.
+        let g = RecordingSettings { format: VideoFormat::Gif, fps: 60, full_resolution: true, ..r };
+        assert_eq!(g.effective_fps(), 15);
+        assert_eq!(g.output_size(2940, 1912, 2.0).0, 1280);
     }
 
     #[test]

@@ -100,6 +100,20 @@ pub struct SnapshotOptions {
     pub pointer: bool,
 }
 
+/// Size of the primary display in pixels, and its pixels per point.
+pub fn primary_display_pixels() -> Option<(u32, u32, f64)> {
+    let monitors = xcap::Monitor::all().ok()?;
+    let m = monitors.iter().find(|m| m.is_primary().unwrap_or(false)).or(monitors.first())?;
+    let scale = m.scale_factor().unwrap_or(1.0).max(1.0) as f64;
+    let (w, h) = (m.width().ok()?, m.height().ok()?);
+    if cfg!(target_os = "macos") {
+        // macOS reports points; convert to pixels.
+        Some(((w as f64 * scale) as u32, (h as f64 * scale) as u32, scale))
+    } else {
+        Some((w, h, scale))
+    }
+}
+
 /// Grab all monitors and, optionally, the window list and mouse pointer.
 pub fn take_snapshot(opts: SnapshotOptions) -> Result<Snapshot> {
     let taken_at = chrono::Local::now();
@@ -201,6 +215,20 @@ impl Snapshot {
     /// several monitors is assembled from all of them (see [`compose`]).
     pub fn crop(&self, region: &Region) -> Option<RgbaImage> {
         compose(&self.monitors, region)
+    }
+
+    /// What to record for a selected region: the display it overlaps most,
+    /// and the region in that display's pixels. (Recordings use one display.)
+    pub fn recording_target(&self, region: &Region) -> Option<(u32, crate::recording::CropRect, f64)> {
+        let m = self.monitor_for(region)?;
+        let r = m.rect.intersect(region)?;
+        let s = m.scale();
+        let (iw, ih) = m.image.dimensions();
+        let x = (((r.x - m.rect.x) * s).round().max(0.0) as u32).min(iw.saturating_sub(2));
+        let y = (((r.y - m.rect.y) * s).round().max(0.0) as u32).min(ih.saturating_sub(2));
+        let width = ((r.w * s).round() as u32).min(iw - x);
+        let height = ((r.h * s).round() as u32).min(ih - y);
+        Some((m.id, crate::recording::CropRect { x, y, width, height }, s))
     }
 
     /// Bounds of the whole desktop.
@@ -316,6 +344,23 @@ mod tests {
         let mons = [shot(0.0, 100.0, 2), shot(100.0, 100.0, 1)];
         let img = compose(&mons, &desktop_bounds(&mons).unwrap()).unwrap();
         assert_eq!((img.width(), img.height()), (400, 200));
+    }
+
+    #[test]
+    fn recording_target_uses_display_pixels() {
+        let snap = Snapshot {
+            monitors: vec![shot(0.0, 200.0, 2), shot(200.0, 100.0, 1)],
+            windows: Vec::new(),
+            pointer: None,
+            taken_at: chrono::Local::now(),
+        };
+        let (id, crop, scale) = snap.recording_target(&Region::new(10.0, 20.0, 50.0, 30.0)).unwrap();
+        assert_eq!((id, scale), (0, 2.0));
+        assert_eq!((crop.x, crop.y, crop.width, crop.height), (20, 40, 100, 60));
+        // Mostly on the second display: clipped to it.
+        let (_, crop, scale) = snap.recording_target(&Region::new(190.0, 0.0, 100.0, 50.0)).unwrap();
+        assert_eq!(scale, 1.0);
+        assert_eq!((crop.x, crop.width), (0, 90));
     }
 
     #[test]
