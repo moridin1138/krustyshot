@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 use chrono::{DateTime, Local};
 use global_hotkey::{GlobalHotKeyEvent, HotKeyState};
 use rustshot_core::recording::{audio, CropRect, Recording, StopReason};
-use rustshot_core::{capture, disk, output, permissions, Config, Destination, Region, RgbaImage, TrayClick};
+use rustshot_core::{capture, disk, output, permissions, share, Config, Destination, Region, RgbaImage, TrayClick};
 use rustshot_editor::{Editor, EditorRequest};
 use tray_icon::menu::MenuEvent;
 use tray_icon::{MouseButton, MouseButtonState, TrayIconEvent};
@@ -20,6 +20,7 @@ use crate::recording_ui::{ActiveRecording, BarAction};
 use crate::settings_ui::SettingsWindow;
 use crate::tray::{self, Tray};
 use crate::platform;
+use crate::send;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CaptureMode {
@@ -116,11 +117,15 @@ pub struct App {
     /// When the low-disk warning was last shown for screenshots (it is
     /// shown at most every 30 minutes for those; always for recordings).
     last_disk_warning: Option<Instant>,
+    /// Text recognition running in the background.
+    ocr_jobs: Vec<Receiver<anyhow::Result<String>>>,
 }
 
 impl App {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let ctx = cc.egui_ctx.clone();
+        // Temporary copies handed to other apps a day or more ago.
+        std::thread::spawn(share::clean_temp);
         // Cmd +/- are used for canvas zoom in the editor.
         ctx.options_mut(|o| o.zoom_with_keyboard = false);
         fonts::install(&ctx);
@@ -184,6 +189,7 @@ impl App {
             overlay_purpose: Purpose::Screenshot,
             recording: None,
             last_disk_warning: None,
+            ocr_jobs: Vec::new(),
         };
 
         // Let macOS show its own permission prompt once (this also adds Rustshot
@@ -657,7 +663,7 @@ impl App {
         ctx.request_repaint();
     }
 
-    /// Send a capture to the configured destinations.
+        /// Send a capture to the configured destinations.
     fn deliver(&mut self, cap: Capture) {
         let dests = self.config.destinations.clone();
         if dests.is_empty() || dests.contains(&Destination::Picker) {
@@ -690,10 +696,68 @@ impl App {
                 Some(path) => output::save_to(&cap.image, &path, &self.config).map(|_| self.notify_saved(path)),
                 None => Ok(()),
             },
+            Destination::OpenWith | Destination::Print | Destination::Email | Destination::Share | Destination::CopyText => {
+                self.send_image(dest, &cap.image, &cap.title, cap.taken_at)
+            }
         };
         if let Err(e) = result {
             log::error!("{}: {e:#}", dest.label());
             self.notice(&dest.label(), &format!("{e:#}"), false);
+        }
+    }
+
+    /// The destinations that hand the image to something else: another
+    /// app, the printer, email, the Share menu, text recognition.
+    fn send_image(&mut self, dest: Destination, image: &RgbaImage, title: &str, taken_at: DateTime<Local>) -> anyhow::Result<()> {
+        if dest == Destination::CopyText {
+            let (tx, rx) = channel();
+            let image = image.clone();
+            std::thread::Builder::new().name("rustshot-ocr".into()).spawn(move || {
+                let _ = tx.send(share::ocr::recognize(&image));
+            })?;
+            self.ocr_jobs.push(rx);
+            return Ok(());
+        }
+        let path = share::temp_copy(image, &self.config, title, taken_at)?;
+        let subject = if title.trim().is_empty() { tr!("title-screenshot") } else { title.to_string() };
+        match dest {
+            Destination::OpenWith => share::open_with(&path, self.config.external_app.as_deref()),
+            Destination::Print => send::print(&path),
+            Destination::Email => send::email(&path, &subject),
+            Destination::Share => send::share(&path),
+            _ => Ok(()),
+        }
+    }
+
+    /// Copy recognised text once it's ready.
+    fn poll_ocr(&mut self, ctx: &egui::Context) {
+        if self.ocr_jobs.is_empty() {
+            return;
+        }
+        let mut finished = Vec::new();
+        self.ocr_jobs.retain(|rx| match rx.try_recv() {
+            Ok(result) => {
+                finished.push(result);
+                false
+            }
+            Err(std::sync::mpsc::TryRecvError::Empty) => true,
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => false,
+        });
+        for result in finished {
+            match result {
+                Ok(text) if text.trim().is_empty() => self.notify(&tr!("toast-no-text"), None),
+                Ok(text) => match output::copy_text_to_clipboard(&text) {
+                    Ok(()) => self.notify(&tr!("toast-text-copied", lines = text.lines().count()), None),
+                    Err(e) => self.notice(&tr!("dest-copy-text"), &format!("{e:#}"), false),
+                },
+                Err(e) => {
+                    log::error!("text recognition: {e:#}");
+                    self.notice(&tr!("dest-copy-text"), &format!("{e:#}"), false);
+                }
+            }
+        }
+        if !self.ocr_jobs.is_empty() {
+            ctx.request_repaint_after(Duration::from_millis(100));
         }
     }
 
@@ -702,7 +766,11 @@ impl App {
         let title = if title.trim().is_empty() { tr!("title-screenshot") } else { title.to_string() };
         self.editors.push(EditorWindow {
             id: egui::ViewportId::from_hash_of(("rustshot-editor", self.next_id)),
-            editor: Editor::new(image, title),
+            editor: {
+                let mut editor = Editor::new(image, title);
+                editor.can_share = Destination::Share.available();
+                editor
+            },
             taken_at,
             path: None,
             focus: true,
@@ -732,7 +800,7 @@ impl App {
         let id = egui::ViewportId::from_hash_of("rustshot-picker");
         let builder = egui::ViewportBuilder::default()
             .with_title("Rustshot")
-            .with_inner_size([280.0, 250.0])
+            .with_inner_size([300.0, 30.0 * picker_choices().len() as f32 + 92.0])
             .with_resizable(false)
             .with_window_level(egui::WindowLevel::AlwaysOnTop);
         let (w, h) = cap.image.dimensions();
@@ -744,25 +812,19 @@ impl App {
             egui::CentralPanel::default().show(ui, |ui| {
                 ui.label(egui::RichText::new(tr!("picker-heading", width = w, height = h)).strong());
                 ui.add_space(6.0);
-                let full = |ui: &mut egui::Ui, text: &str| {
-                    ui.add_sized([ui.available_width(), 28.0], egui::Button::new(text)).clicked()
-                };
-                if full(ui, &tr!("dest-editor")) {
-                    choice = Some(Some(Destination::Editor));
-                }
-                if full(ui, &tr!("dest-clipboard")) {
-                    choice = Some(Some(Destination::Clipboard));
-                }
-                if full(ui, &tr!("dest-file")) {
-                    choice = Some(Some(Destination::File));
-                }
-                if full(ui, &tr!("dest-file-as")) {
-                    choice = Some(Some(Destination::FileAs));
-                }
-                ui.add_space(4.0);
-                if full(ui, &tr!("button-cancel")) {
-                    choice = Some(None);
-                }
+                // Full-width buttons, labels on the left like a menu.
+                ui.with_layout(egui::Layout::top_down_justified(egui::Align::Min), |ui| {
+                    let full = |ui: &mut egui::Ui, text: String| ui.add(egui::Button::new(text).min_size(egui::vec2(0.0, 26.0))).clicked();
+                    for dest in picker_choices() {
+                        if full(ui, format!("{}  {}", dest_icon(dest), dest.label())) {
+                            choice = Some(Some(dest));
+                        }
+                    }
+                    ui.add_space(4.0);
+                    if full(ui, tr!("button-cancel")) {
+                        choice = Some(None);
+                    }
+                });
             });
             choice
         });
@@ -784,6 +846,7 @@ impl App {
         let mut closed = Vec::new();
         let mut errors = Vec::new();
         let mut toasts: Vec<(String, Option<PathBuf>)> = Vec::new();
+        let mut sends = Vec::new();
         for (idx, ew) in self.editors.iter_mut().enumerate() {
             let (w, h) = ew.editor.image_size();
             let ppp = ctx.pixels_per_point().max(1.0);
@@ -825,6 +888,17 @@ impl App {
                         close = true;
                         Ok(())
                     }
+                    EditorRequest::OpenWith | EditorRequest::Print | EditorRequest::Email | EditorRequest::Share | EditorRequest::CopyText => {
+                        let dest = match req {
+                            EditorRequest::OpenWith => Destination::OpenWith,
+                            EditorRequest::Print => Destination::Print,
+                            EditorRequest::Email => Destination::Email,
+                            EditorRequest::Share => Destination::Share,
+                            _ => Destination::CopyText,
+                        };
+                        sends.push((dest, ew.editor.flatten(), ew.editor.title.clone(), ew.taken_at));
+                        Ok(())
+                    }
                 };
                 if let Err(e) = result {
                     ew.editor.set_status(tr!("status-error", error = format!("{e:#}")));
@@ -847,6 +921,12 @@ impl App {
         }
         for (message, path) in toasts {
             self.notify(&message, path);
+        }
+        for (dest, image, title, taken_at) in sends {
+            if let Err(e) = self.send_image(dest, &image, &title, taken_at) {
+                log::error!("{}: {e:#}", dest.label());
+                self.notice(&dest.label(), &format!("{e:#}"), false);
+            }
         }
     }
 
@@ -1021,6 +1101,7 @@ fn confirm_close(config: &Config, ew: &mut EditorWindow) -> bool {
 impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.handle_events(ctx);
+        self.poll_ocr(ctx);
         self.stress_step(ctx);
         if self.quit {
             // Never lose a recording by quitting: finish and save it first.
@@ -1047,5 +1128,26 @@ impl eframe::App for App {
 
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
         [0.0; 4]
+    }
+}
+
+/// Every destination the quick menu offers on this platform.
+fn picker_choices() -> Vec<Destination> {
+    Destination::ALL.into_iter().filter(|d| *d != Destination::Picker && d.available()).collect()
+}
+
+pub fn dest_icon(dest: Destination) -> &'static str {
+    use egui_phosphor::regular as icon;
+    match dest {
+        Destination::Picker => icon::LIST,
+        Destination::Editor => icon::PENCIL_SIMPLE,
+        Destination::Clipboard => icon::COPY,
+        Destination::File => icon::FLOPPY_DISK,
+        Destination::FileAs => icon::FLOPPY_DISK_BACK,
+        Destination::OpenWith => icon::ARROW_SQUARE_OUT,
+        Destination::Print => icon::PRINTER,
+        Destination::Email => icon::ENVELOPE_SIMPLE,
+        Destination::Share => icon::SHARE_NETWORK,
+        Destination::CopyText => icon::TEXT_T,
     }
 }

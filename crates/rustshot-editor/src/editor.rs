@@ -19,6 +19,14 @@ pub enum EditorRequest {
     SaveAs,
     Copy,
     Close,
+    /// Open in another app.
+    OpenWith,
+    Print,
+    Email,
+    /// The system Share menu (only offered where `Editor::can_share`).
+    Share,
+    /// Recognise and copy the text.
+    CopyText,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -175,6 +183,8 @@ pub struct Editor {
     border_width: u32,
     border_color: Color32,
     resize_percent: f32,
+    /// Offer the system Share menu (set by the app where there is one).
+    pub can_share: bool,
 }
 
 impl Editor {
@@ -200,6 +210,7 @@ impl Editor {
             border_width: 8,
             border_color: Color32::WHITE,
             resize_percent: 50.0,
+            can_share: false,
         }
     }
 
@@ -417,6 +428,9 @@ impl Editor {
             if i.consume_key(cmd, Key::W) {
                 requests.push(EditorRequest::Close);
             }
+            if i.consume_key(cmd, Key::P) {
+                requests.push(EditorRequest::Print);
+            }
         });
         if typing {
             return;
@@ -485,6 +499,24 @@ impl Editor {
             if icon_button(ui, icon::COPY, true, &tr!("editor-copy-tip", keys = keys("Mod+C"))).clicked() {
                 requests.push(EditorRequest::Copy);
             }
+            ui.menu_button(egui::RichText::new(icon::EXPORT).size(ICON_SIZE), |ui| {
+                let mut item = |ui: &mut Ui, glyph: &str, label: String, request: EditorRequest| {
+                    if ui.button(format!("{glyph}  {label}")).clicked() {
+                        requests.push(request);
+                        ui.close();
+                    }
+                };
+                item(ui, icon::ARROW_SQUARE_OUT, tr!("dest-open-with"), EditorRequest::OpenWith);
+                item(ui, icon::PRINTER, format!("{}  ({})", tr!("dest-print"), keys("Mod+P")), EditorRequest::Print);
+                item(ui, icon::ENVELOPE_SIMPLE, tr!("dest-email"), EditorRequest::Email);
+                if self.can_share {
+                    item(ui, icon::SHARE_NETWORK, tr!("dest-share"), EditorRequest::Share);
+                }
+                ui.separator();
+                item(ui, icon::TEXT_T, tr!("dest-copy-text"), EditorRequest::CopyText);
+            })
+            .response
+            .on_hover_text(tr!("editor-send-tip"));
             ui.separator();
             if icon_button(ui, icon::ARROW_COUNTER_CLOCKWISE, self.history.can_undo(), &tr!("editor-undo-tip", keys = keys("Mod+Z"))).clicked() {
                 self.undo();

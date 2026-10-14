@@ -283,12 +283,14 @@ impl SettingsWindow {
                 ui.add_space(6.0);
                 ui.weak(if ask { tr!("settings-otherwise-always") } else { tr!("settings-always") });
                 ui.horizontal_wrapped(|ui| {
-                    for (dest, label) in [
-                        (Destination::Editor, tr!("settings-dest-editor")),
-                        (Destination::Clipboard, tr!("settings-dest-copy")),
-                        (Destination::File, tr!("settings-dest-folder")),
-                        (Destination::FileAs, tr!("dest-file-as")),
-                    ] {
+                    let short = |dest: Destination| match dest {
+                        Destination::Editor => tr!("settings-dest-editor"),
+                        Destination::Clipboard => tr!("settings-dest-copy"),
+                        Destination::File => tr!("settings-dest-folder"),
+                        other => other.label(),
+                    };
+                    let choices = Destination::ALL.into_iter().filter(|d| *d != Destination::Picker && d.available());
+                    for (dest, label) in choices.map(|d| (d, format!("{}  {}", crate::app::dest_icon(d), short(d)))) {
                         let on = d.destinations.contains(&dest);
                         if ui.add(egui::Button::selectable(on, label)).clicked() {
                             if on {
@@ -304,6 +306,28 @@ impl SettingsWindow {
                     }
                 });
                 ui.add_space(6.0);
+            });
+            divider(ui);
+            row(ui, &tr!("settings-open-with"), Some(&tr!("settings-open-with-sub")), |ui| {
+                if d.external_app.is_some() && ui.button(tr!("button-default")).clicked() {
+                    d.external_app = None;
+                }
+                if ui.button(tr!("button-change")).clicked() {
+                    let mut dialog = rfd::FileDialog::new();
+                    if cfg!(target_os = "macos") {
+                        dialog = dialog.set_directory("/Applications").add_filter("App", &["app"]);
+                    } else if cfg!(windows) {
+                        dialog = dialog.add_filter("Program", &["exe"]);
+                    }
+                    if let Some(app) = dialog.pick_file() {
+                        d.external_app = Some(app);
+                    }
+                }
+                let name = match &d.external_app {
+                    None => tr!("settings-open-with-default"),
+                    Some(app) => app.file_stem().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
+                };
+                ui.label(RichText::new(name).weak());
             });
         });
 

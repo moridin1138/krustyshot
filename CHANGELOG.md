@@ -13,6 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Sound in MP4 recordings: the microphone (with a choice of device) and system sound, each turned on separately in Settings → Recording and mixed into one AAC track. System sound needs macOS 13 or later; on Windows it records what the default speakers or headphones play. Both are off by default. While recording, the bar shows a microphone and a speaker icon that blink with the red dot; click one to mute or unmute that source.
 - While recording a region or a window, the rest of the display is dimmed and a thin red line marks the recorded area. Clicks go straight through, and none of it appears in the recording.
 - The recording bar keeps every item in a fixed place, so the timer, size and icons don't shift as they change.
+- New destinations, in the quick menu, the after-capture settings and the editor's new send menu: **Open in another app** (the default image app, or one chosen in Settings), **Print** (⌘P / Ctrl+P in the editor), **Email** (a new message with the image attached), **Share** on macOS (AirDrop, Messages, Notes and more) and **Copy text**, which recognises the text in the image (Vision on macOS, Windows' built-in OCR, Tesseract on Linux) and copies it.
 - **Show mouse clicks** (Settings → Recording): a dot while the button is held and a fading ring where you click.
 
 ### Changed

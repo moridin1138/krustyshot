@@ -29,6 +29,11 @@ dest-editor = Open in image editor
 dest-file = Save directly
 dest-file-as = Save as…
 dest-picker = Ask me (quick menu)
+dest-open-with = Open in another app
+dest-print = Print…
+dest-email = Email
+dest-share = Share…
+dest-copy-text = Copy text (OCR)
 picker-heading = Screenshot { $width } × { $height }
 
 ## Capture overlay
@@ -99,6 +104,11 @@ disk-low-title = Low disk space
 ## Notifications
 
 toast-copied = Copied to clipboard
+toast-no-text = No text found in the image
+toast-text-copied = { $lines ->
+    [one] Copied 1 line of text
+   *[other] Copied { $lines } lines of text
+}
 toast-recording-discarded = Recording discarded
 toast-recording-saved = Saved { $name } ({ $size })
 toast-saved = Saved { $name }
@@ -202,6 +212,7 @@ tool-text = Text
 
 editor-apply-crop = Apply crop
 editor-copy-tip = Copy image to clipboard ({ $keys })
+editor-send-tip = Open in another app, print, email, share or copy the text
 editor-crop-help = Drag to choose the area to keep, then press Enter.
 editor-delete-tip = Delete selected (Delete)
 editor-effects-tip = Effects: shadow, torn edges, border, greyscale, rotate, resize
@@ -266,6 +277,9 @@ settings-delay-sub = Time to open a menu or hover something
 settings-dest-copy = Copy
 settings-dest-editor = Open in editor
 settings-dest-folder = Save to folder
+settings-open-with = Open in another app with
+settings-open-with-sub = Used by “Open in another app”
+settings-open-with-default = Default image app
 settings-example = Example: { $name }
 settings-file-name = File name
 settings-folder = Folder

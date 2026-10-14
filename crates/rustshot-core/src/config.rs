@@ -20,16 +20,36 @@ pub enum Destination {
     File,
     /// Ask for a filename with a Save dialog.
     FileAs,
+    /// Open in another app (the default image app, or `Config::external_app`).
+    OpenWith,
+    Print,
+    /// A new email with the image attached.
+    Email,
+    /// The system Share menu (macOS: AirDrop, Messages, Notes, …).
+    Share,
+    /// Recognise the text in the image and copy it.
+    CopyText,
 }
 
 impl Destination {
-    pub const ALL: [Destination; 5] = [
+    pub const ALL: [Destination; 10] = [
         Destination::Picker,
         Destination::Editor,
         Destination::Clipboard,
         Destination::File,
         Destination::FileAs,
+        Destination::OpenWith,
+        Destination::Print,
+        Destination::Email,
+        Destination::Share,
+        Destination::CopyText,
     ];
+
+    /// Whether this platform offers the destination.
+    pub fn available(self) -> bool {
+        // The Share menu is macOS's.
+        self != Destination::Share || cfg!(target_os = "macos")
+    }
 
     pub fn label(self) -> String {
         match self {
@@ -38,6 +58,11 @@ impl Destination {
             Destination::Clipboard => tr!("dest-clipboard"),
             Destination::File => tr!("dest-file"),
             Destination::FileAs => tr!("dest-file-as"),
+            Destination::OpenWith => tr!("dest-open-with"),
+            Destination::Print => tr!("dest-print"),
+            Destination::Email => tr!("dest-email"),
+            Destination::Share => tr!("dest-share"),
+            Destination::CopyText => tr!("dest-copy-text"),
         }
     }
 }
@@ -295,6 +320,9 @@ pub struct Config {
     pub language: Option<String>,
     /// Region used by "Capture last region".
     pub last_region: Option<Region>,
+    /// The app "Open in another app" uses (`.app` on macOS, a program
+    /// elsewhere); `None` for the system's default image app.
+    pub external_app: Option<PathBuf>,
 }
 
 impl Default for Config {
@@ -318,6 +346,7 @@ impl Default for Config {
             recording: RecordingSettings::default(),
             language: None,
             last_region: None,
+            external_app: None,
         }
     }
 }

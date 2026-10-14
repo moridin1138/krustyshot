@@ -29,6 +29,11 @@ dest-editor = Abrir en el editor de imágenes
 dest-file = Guardar directamente
 dest-file-as = Guardar como…
 dest-picker = Preguntarme (menú rápido)
+dest-open-with = Abrir en otra app
+dest-print = Imprimir…
+dest-email = Enviar por correo
+dest-share = Compartir…
+dest-copy-text = Copiar texto (OCR)
 picker-heading = Captura { $width } × { $height }
 
 ## Capture overlay
@@ -99,6 +104,11 @@ disk-low-title = Poco espacio en disco
 ## Notifications
 
 toast-copied = Copiado al portapapeles
+toast-no-text = No se encontró texto en la imagen
+toast-text-copied = { $lines ->
+    [one] Se copió 1 línea de texto
+   *[other] Se copiaron { $lines } líneas de texto
+}
 toast-recording-discarded = Grabación descartada
 toast-recording-saved = { $name } guardado ({ $size })
 toast-saved = { $name } guardado
@@ -202,6 +212,7 @@ tool-text = Texto
 
 editor-apply-crop = Aplicar recorte
 editor-copy-tip = Copiar la imagen al portapapeles ({ $keys })
+editor-send-tip = Abrir en otra app, imprimir, enviar por correo, compartir o copiar el texto
 editor-crop-help = Arrastra para elegir la zona que quieres conservar y pulsa Intro.
 editor-delete-tip = Eliminar la selección (Supr)
 editor-effects-tip = Efectos: sombra, bordes rasgados, borde, escala de grises, girar, cambiar tamaño
@@ -266,6 +277,9 @@ settings-delay-sub = Tiempo para abrir un menú o pasar el puntero por algo
 settings-dest-copy = Copiar
 settings-dest-editor = Abrir en el editor
 settings-dest-folder = Guardar en la carpeta
+settings-open-with = Abrir en otra app con
+settings-open-with-sub = Lo usa «Abrir en otra app»
+settings-open-with-default = App de imágenes predeterminada
 settings-example = Ejemplo: { $name }
 settings-file-name = Nombre del archivo
 settings-folder = Carpeta

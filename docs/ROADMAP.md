@@ -16,11 +16,8 @@ Released in 0.3.0: the redesigned Settings window, shortcut recorder, open at lo
 
 ## Phase 3: more destinations
 
-- Print
-- Open in an external app
-- Email
-- Upload plugins (Imgur and similar)
-- OCR
+- Done (unreleased): open in another app (default or chosen), print, email, the macOS Share menu, and copy text (OCR with Vision, Windows OCR or Tesseract), from the quick menu, the after-capture settings and the editor.
+- Next: a custom uploader (any server: URL, form field, and where to find the link in the reply).
 
 ## Video
 

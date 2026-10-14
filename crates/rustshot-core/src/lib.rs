@@ -11,6 +11,7 @@ pub mod output;
 pub mod permissions;
 pub mod pointer;
 pub mod recording;
+pub mod share;
 pub mod update;
 
 pub use capture::{MonitorShot, Snapshot, WindowInfo};

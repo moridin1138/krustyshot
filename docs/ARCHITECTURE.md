@@ -5,7 +5,7 @@ Rustshot is a Cargo workspace with four crates plus a maintenance tool. Each cra
 | Crate | Kind | Responsibility |
 |---|---|---|
 | `crates/rustshot-i18n` | library | Interface translations (Fluent files in `locales/`) and the `tr!` macro |
-| `crates/rustshot-core` | library, no UI | Screen capture and recording, geometry, settings, filename patterns, saving and clipboard, disk space, mouse pointer, open at login, update check |
+| `crates/rustshot-core` | library, no UI | Screen capture and recording, geometry, settings, filename patterns, saving and clipboard, sending to other apps, printers and email, text recognition, disk space, mouse pointer, open at login, update check |
 | `crates/rustshot-editor` | library, egui | The annotation editor: document model, undo history, rendering and export |
 | `crates/rustshot-app` | binary `rustshot` | Tray icon, hotkeys, capture overlay, recording bar, Settings, fonts, and wiring everything together |
 | `xtask` | binary, dev only | `cargo xtask icons` regenerates the app icon |
@@ -54,6 +54,7 @@ Tray menu clicks and hotkey presses arrive on callbacks. These push an `AppEvent
 | Module | Window |
 |---|---|
 | `overlay.rs` | One borderless overlay per monitor while choosing what to capture or record |
+| `send.rs` | Print, email and Share: AppKit panels on macOS (main thread), `rustshot_core::share` elsewhere |
 | `recording_ui.rs` | The floating recording bar (timer, size, Stop, Discard) |
 | `app.rs` (`show_picker`) | The "what next?" destination picker |
 | `app.rs` (`show_editors`) | One editor window per open image |
@@ -107,6 +108,16 @@ There are two kinds of element:
 - **Raster** elements (highlight in its four styles, obfuscate) change the pixels underneath. They are baked into the canvas texture whenever the document revision changes, and into the exported image by `raster::composite`.
 
 Undo works by snapshot. Before each change the whole `Document` is pushed onto `History`. The base image is behind an `Arc`, so a snapshot only copies the element list, except after a crop, which creates a new base image.
+
+## Destinations (`rustshot-core::share`)
+
+Clipboard and file destinations live in `output.rs`. The others hand the image to something else, so `share::temp_copy` first writes a PNG named with the filename pattern to a `rustshot` folder in the system temp directory (cleared of files older than a day at start-up):
+
+- **Open in another app:** `open -a` on macOS, the program itself elsewhere, or the default app (`open`, `ShellExecute`, `xdg-open`).
+- **Print:** an `NSPrintOperation` fitted to the page on macOS; Windows' Print Pictures window (`ShellExecute` "print"); `lp` on Linux.
+- **Email:** the Mail compose sharing service on macOS; Simple MAPI (`MAPISendMailW`, loaded from `mapi32.dll`) on Windows; `xdg-email` on Linux.
+- **Share (macOS):** `NSSharingServicePicker` next to the pointer in the active window.
+- **Copy text (`share/ocr.rs`):** Vision (`VNRecognizeTextRequest`, accurate, app language first) on macOS, `Windows.Media.Ocr` on Windows, the `tesseract` command on Linux. It runs on a background thread; the app copies the result when it arrives.
 
 ## Recording (`rustshot-core::recording`)
 
