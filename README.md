@@ -116,4 +116,4 @@ In plain terms (the licence text is what counts):
 - You can read, modify and share the code, as long as you pass on the licence.
 - You can't sell Rustshot, or offer a product or service that competes with it, including a repackaged or rebranded version.
 
-The commits made before the 0.1.0 release were published under GPL-3.0-or-later. Every release, starting with 0.1.0, uses the PolyForm Shield licence.
+Version 0.1.0 and earlier commits were published under GPL-3.0-or-later and remain available under those terms. From 0.1.1 onward, Rustshot uses the PolyForm Shield licence.

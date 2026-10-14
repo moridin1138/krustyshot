@@ -20,12 +20,21 @@ Every pull request or change that users would notice adds a line under `## [Unre
 ## Release checklist
 
 1. **Make sure `main` is green.** CI passes on all three platforms.
-2. **Test by hand on macOS** (and on Windows or Linux if you can):
-   - Region, window, full-screen and last-region capture from both hotkeys and the tray menu
-   - A region on a Retina display produces the expected pixel size
-   - Each destination: editor, clipboard, save directly, save as
-   - Every editor tool, undo and redo, crop, save, copy (paste into Preview to check)
-   - Preferences: change a hotkey, save, and confirm the new hotkey works
+2. **Test a local release build on macOS.** Running with `cargo run` is not enough: it borrows your terminal's Screen Recording permission and hides permission and packaging bugs. Instead:
+   ```bash
+   cargo build --release -p rustshot-app
+   scripts/bundle-macos.sh
+   ```
+   Quit any running Rustshot, replace `/Applications/Rustshot.app` with `target/release/bundle/Rustshot.app`, and open it **from Finder**. Then check:
+   - At most one permission prompt appears at startup.
+   - Without permission, a capture hotkey shows Rustshot's permission window (not a wallpaper-only screenshot). Reset permission, Open System Settings and Quit work.
+   - With permission granted, region, window, full-screen and last-region capture work from both hotkeys and the tray menu, and show your real windows.
+   - The overlay covers every display, including the menu bar, with nothing stretched.
+   - A region on a Retina display produces the expected pixel size.
+   - Each destination works: editor, clipboard, save directly, save as.
+   - Every editor tool, undo and redo, crop, save, and copy (paste into Preview to check).
+   - Preferences: change a hotkey, save, and confirm the new hotkey works.
+   - Open and close the editor, Preferences and notice windows several times, and cancel captures with Esc. Rustshot must not quit, and `~/Library/Logs/DiagnosticReports/` must have no new `rustshot-*.ips` file.
 3. **Choose the version** using the rules above.
 4. **Update the version** in the root `Cargo.toml`, then run `cargo build` so `Cargo.lock` picks it up.
 5. **Update CHANGELOG.md:**
@@ -43,7 +52,8 @@ Every pull request or change that users would notice adds a line under `## [Unre
    - `Rustshot-vX.Y.Z-linux-x86_64.tar.gz`
    - `SHA256SUMS.txt`
 
-   It attaches them to a **draft** GitHub release, using the changelog section as the notes. Download at least the macOS build, check that it launches, then click Publish.
+   It attaches them to a **draft** GitHub release, using the changelog section as the notes.
+9. **Test the downloaded build before publishing.** Download the macOS zip from the draft, unzip it, replace `/Applications/Rustshot.app`, open it from Finder, and repeat the permission, capture and window open/close checks from step 2. Only then click Publish. If anything fails, delete the draft and the tag, fix it, and start again.
 
 ## If something goes wrong
 

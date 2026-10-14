@@ -28,6 +28,27 @@ pub fn request_screen_capture_access() -> bool {
     true
 }
 
+/// Bundle identifier of the macOS app (see `crates/rustshot-app/bundle/Info.plist`).
+pub const MACOS_BUNDLE_ID: &str = "org.rustshot.Rustshot";
+
+/// Forget any Screen Recording decision for Rustshot and ask again.
+///
+/// macOS ties the permission to the app's code signature. Builds that are not
+/// signed with a stable certificate get a new signature every release, so an
+/// old "on" entry in System Settings can silently stop applying. Resetting
+/// removes it so the user can grant access to the current build.
+pub fn reset_screen_capture_access() {
+    #[cfg(target_os = "macos")]
+    {
+        match std::process::Command::new("tccutil").args(["reset", "ScreenCapture", MACOS_BUNDLE_ID]).status() {
+            Ok(s) if s.success() => log::info!("reset Screen Recording permission for {MACOS_BUNDLE_ID}"),
+            Ok(s) => log::warn!("tccutil exited with {s}"),
+            Err(e) => log::warn!("could not run tccutil: {e}"),
+        }
+        request_screen_capture_access();
+    }
+}
+
 /// Open the relevant System Settings pane, where supported.
 pub fn open_privacy_settings() {
     #[cfg(target_os = "macos")]

@@ -11,6 +11,22 @@ pub fn configure_event_loop<T>(builder: &mut winit::event_loop::EventLoopBuilder
     let _ = builder;
 }
 
+/// Work around an AppKit crash on macOS.
+///
+/// AppKit's Touch Bar support watches every window, even on Macs without a
+/// Touch Bar. When one of Rustshot's windows closes, it sometimes tries to
+/// stop watching an observer it never added, which raises an exception
+/// (`_NSTouchBarFinderObservation invalidate`) and kills the app. Rustshot
+/// has no Touch Bar UI, so switch the feature off before AppKit starts.
+pub fn disable_touch_bar() {
+    #[cfg(target_os = "macos")]
+    {
+        use objc2_foundation::{NSString, NSUserDefaults};
+        let defaults = NSUserDefaults::standardUserDefaults();
+        defaults.setBool_forKey(false, &NSString::from_str("NSFunctionBarAPIEnabled"));
+    }
+}
+
 pub const OVERLAY_TITLE: &str = "Rustshot Overlay";
 
 /// Window title for the overlay on monitor `i`, so each window can be found again.

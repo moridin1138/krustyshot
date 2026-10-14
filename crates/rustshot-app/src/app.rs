@@ -61,6 +61,7 @@ struct Notice {
     title: String,
     body: String,
     permission: bool,
+    shown: bool,
 }
 
 pub struct App {
@@ -128,15 +129,12 @@ impl App {
             quit: false,
         };
 
+        // Let macOS show its own permission prompt once (this also adds Rustshot
+        // to the Screen Recording list). Rustshot's explanation only appears if
+        // a capture is attempted without permission, so the two never compete.
         if !permissions::has_screen_capture_access() {
+            log::info!("no Screen Recording permission yet; asking macOS");
             permissions::request_screen_capture_access();
-            app.notice(
-                "Screen recording permission needed",
-                "Rustshot needs Screen Recording access to capture other apps.\n\n\
-                 Open System Settings → Privacy & Security → Screen Recording, enable Rustshot \
-                 (or your terminal if you run it with cargo), then quit and restart Rustshot.",
-                true,
-            );
         }
         if !app.hotkey_errors.is_empty() {
             let body = format!(
@@ -156,7 +154,27 @@ impl App {
             title: title.into(),
             body: body.into(),
             permission,
+            shown: false,
         });
+    }
+
+    /// Explain how to grant Screen Recording access (shown at most once at a time).
+    fn permission_notice(&mut self) {
+        if self.notices.iter().any(|n| n.permission) {
+            return;
+        }
+        self.notice(
+            "Screen Recording permission needed",
+            "Rustshot needs Screen Recording permission to capture other apps. Without it, \
+             macOS only lets it capture the desktop background.\n\n\
+             1. Click Open System Settings.\n\
+             2. Under Privacy & Security > Screen Recording, turn on Rustshot.\n\
+             3. Click Quit Rustshot, then open Rustshot again.\n\n\
+             Is Rustshot already turned on but captures still show no windows? Each new version \
+             needs the permission again. Click Reset permission and answer the macOS prompt.\n\n\
+             Running Rustshot from a terminal? Give the permission to your terminal app instead.",
+            true,
+        );
     }
 
     fn handle_events(&mut self, ctx: &egui::Context) {
@@ -238,6 +256,15 @@ impl App {
 
     fn start_capture(&mut self, mode: CaptureMode, ctx: &egui::Context) {
         if self.overlay.is_some() {
+            return;
+        }
+        // Without permission macOS returns only the wallpaper, which looks like
+        // a broken screenshot. Explain instead of capturing.
+        if !permissions::has_screen_capture_access() {
+            log::warn!("capture blocked: no Screen Recording permission");
+            self.permission_notice();
+            platform::activate_app();
+            ctx.request_repaint();
             return;
         }
         let result = match mode {
@@ -466,10 +493,12 @@ impl App {
 
     fn show_notices(&mut self, ctx: &egui::Context) {
         let mut done = Vec::new();
-        for (i, n) in self.notices.iter().enumerate() {
+        let mut quit = false;
+        for (i, n) in self.notices.iter_mut().enumerate() {
+            let size = if n.permission { [500.0, 380.0] } else { [420.0, 220.0] };
             let builder = egui::ViewportBuilder::default()
                 .with_title(&n.title)
-                .with_inner_size([420.0, 220.0])
+                .with_inner_size(size)
                 .with_window_level(egui::WindowLevel::AlwaysOnTop);
             let close = ctx.show_viewport_immediate(n.id, builder, |ui, _| {
                 let mut close = ui.input(|i| i.viewport().close_requested());
@@ -478,23 +507,46 @@ impl App {
                     ui.add_space(6.0);
                     ui.label(&n.body);
                     ui.add_space(10.0);
-                    ui.horizontal(|ui| {
-                        if n.permission && ui.button("Open System Settings").clicked() {
-                            permissions::open_privacy_settings();
+                    ui.horizontal_wrapped(|ui| {
+                        if n.permission {
+                            if ui.button("Open System Settings").clicked() {
+                                permissions::open_privacy_settings();
+                            }
+                            if ui
+                                .button("Reset permission")
+                                .on_hover_text("Remove Rustshot's old Screen Recording entry and ask again")
+                                .clicked()
+                            {
+                                // macOS shows its own prompt next; get out of its way.
+                                permissions::reset_screen_capture_access();
+                                close = true;
+                            }
+                            if ui.button("Quit Rustshot").clicked() {
+                                quit = true;
+                            }
                         }
-                        if ui.button("OK").clicked() {
+                        if ui.button(if n.permission { "Close" } else { "OK" }).clicked() {
                             close = true;
                         }
                     });
                 });
                 close
             });
+            if !n.shown {
+                ctx.send_viewport_cmd_to(n.id, egui::ViewportCommand::Focus);
+                platform::activate_app();
+                n.shown = true;
+            }
             if close {
                 done.push(i);
             }
         }
         for i in done.into_iter().rev() {
             self.notices.remove(i);
+        }
+        if quit {
+            self.quit = true;
+            ctx.request_repaint();
         }
     }
 }

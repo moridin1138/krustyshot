@@ -12,6 +12,7 @@ mod tray;
 
 fn main() -> eframe::Result {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    platform::disable_touch_bar();
 
     // The root window is never meant to be seen: the app lives in the tray
     // and opens overlay/editor/settings windows as child viewports.

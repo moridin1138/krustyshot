@@ -370,20 +370,20 @@ impl Editor {
         use egui_phosphor::regular as icon;
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing.x = 4.0;
-            if icon_button(ui, icon::FLOPPY_DISK, true, "Save to the output folder (⌘S)").clicked() {
+            if icon_button(ui, icon::FLOPPY_DISK, true, &format!("Save to the output folder ({})", keys("Mod+S"))).clicked() {
                 requests.push(EditorRequest::Save);
             }
-            if icon_button(ui, icon::FLOPPY_DISK_BACK, true, "Save as… (⌘⇧S)").clicked() {
+            if icon_button(ui, icon::FLOPPY_DISK_BACK, true, &format!("Save as… ({})", keys("Mod+Shift+S"))).clicked() {
                 requests.push(EditorRequest::SaveAs);
             }
-            if icon_button(ui, icon::COPY, true, "Copy image to clipboard (⌘C)").clicked() {
+            if icon_button(ui, icon::COPY, true, &format!("Copy image to clipboard ({})", keys("Mod+C"))).clicked() {
                 requests.push(EditorRequest::Copy);
             }
             ui.separator();
-            if icon_button(ui, icon::ARROW_COUNTER_CLOCKWISE, self.history.can_undo(), "Undo (⌘Z)").clicked() {
+            if icon_button(ui, icon::ARROW_COUNTER_CLOCKWISE, self.history.can_undo(), &format!("Undo ({})", keys("Mod+Z"))).clicked() {
                 self.undo();
             }
-            if icon_button(ui, icon::ARROW_CLOCKWISE, self.history.can_redo(), "Redo (⌘⇧Z)").clicked() {
+            if icon_button(ui, icon::ARROW_CLOCKWISE, self.history.can_redo(), &format!("Redo ({})", keys("Mod+Shift+Z"))).clicked() {
                 self.redo();
             }
             if icon_button(ui, icon::TRASH, self.selected.is_some(), "Delete selected (Delete)").clicked() {
@@ -487,7 +487,7 @@ impl Editor {
                 None => "Fit".into(),
             };
             ui.menu_button(format!("Zoom: {zoom_label}"), |ui| {
-                if ui.button("Fit to window (⌘0)").clicked() {
+                if ui.button(format!("Fit to window ({})", keys("Mod+0"))).clicked() {
                     self.zoom = None;
                 }
                 for z in [0.25, 0.5, 1.0, 2.0, 4.0] {
@@ -744,6 +744,12 @@ impl Editor {
 }
 
 const ICON_SIZE: f32 = 18.0;
+
+/// Spell out a shortcut for this platform: `Mod` is Cmd on macOS, Ctrl elsewhere.
+/// (egui's bundled fonts have no ⇧ or ⌥ glyphs, so symbols would show as boxes.)
+fn keys(shortcut: &str) -> String {
+    shortcut.replace("Mod", if cfg!(target_os = "macos") { "Cmd" } else { "Ctrl" })
+}
 
 fn icon_button(ui: &mut Ui, glyph: &str, enabled: bool, tooltip: &str) -> egui::Response {
     let button = egui::Button::new(egui::RichText::new(glyph).size(ICON_SIZE)).min_size(egui::vec2(30.0, 28.0));
