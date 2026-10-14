@@ -11,7 +11,9 @@ While the version is below 1.0:
 
 1.0.0 marks Greenshot feature parity on macOS and Windows with a stable settings format. After 1.0 the usual rules apply: major for breaking changes, minor for features, patch for fixes.
 
-Pre-releases use a suffix, for example `0.2.0-beta.1`. The release workflow marks every 0.x version and anything with a suffix as a pre-release on GitHub.
+Pre-releases use a suffix, for example `0.5.0-beta.1`; the release workflow marks those as pre-releases on GitHub. Plain versions (including 0.x) are published as the Latest release.
+
+To test a build without releasing, run the **Preview build** workflow (Actions → Preview build → Run workflow, pick a branch). It uploads the Windows, macOS and Linux packages as downloadable artifacts on that run, without creating a release.
 
 ## Changelog
 

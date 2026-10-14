@@ -123,6 +123,6 @@ jobs:
       - uses: softprops/action-gh-release@v3
         with:
           draft: true
-          prerelease: ${{ startsWith(github.ref_name, 'v0.') || contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
           body_path: notes.md
           files: dist/*

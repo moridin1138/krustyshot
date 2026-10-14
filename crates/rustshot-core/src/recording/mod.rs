@@ -8,6 +8,8 @@
 mod gif;
 #[cfg(target_os = "macos")]
 mod mp4_macos;
+#[cfg(windows)]
+mod mp4_windows;
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -40,7 +42,7 @@ pub trait VideoEncoder: Send {
 pub fn supports(format: VideoFormat) -> bool {
     match format {
         VideoFormat::Gif => true,
-        VideoFormat::Mp4 => cfg!(target_os = "macos"),
+        VideoFormat::Mp4 => cfg!(any(target_os = "macos", windows)),
     }
 }
 
@@ -115,7 +117,9 @@ impl Recording {
                 fps,
                 settings.bit_rate(out_w, out_h),
             )?),
-            #[cfg(not(target_os = "macos"))]
+            #[cfg(windows)]
+            VideoFormat::Mp4 => Box::new(mp4_windows::Mp4Encoder::create(path, (out_w, out_h), fps, settings.bit_rate(out_w, out_h))?),
+            #[cfg(not(any(target_os = "macos", windows)))]
             VideoFormat::Mp4 => unreachable!(),
         };
         log::info!(

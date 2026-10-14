@@ -4594,6 +4594,7 @@ dependencies = [
  "rustshot-editor",
  "rustshot-i18n",
  "tray-icon",
+ "windows",
  "winit",
 ]
 
@@ -4622,6 +4623,7 @@ dependencies = [
  "tiny-skia 0.12.0",
  "toml 1.1.8+spec-1.1.0",
  "ureq",
+ "windows",
  "windows-sys 0.61.2",
  "x11rb",
  "xcap",

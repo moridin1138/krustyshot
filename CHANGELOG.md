@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+
+- MP4 recording on Windows, using Windows' own H.264 encoder (Media Foundation), with the same quality, resolution and frame-rate settings as on macOS.
+- On Windows 10 (version 2004) and later, the recording bar is hidden from the recording, as on macOS.
+
+### Changed
+
+- Releases are published as the latest release rather than as pre-releases; only versions with a suffix such as `-beta.1` are pre-releases.
+
 ## [0.4.0] - 2026-10-14
 
 Screen recording.

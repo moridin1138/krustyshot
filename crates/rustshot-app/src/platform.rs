@@ -74,7 +74,21 @@ pub fn exclude_from_capture(title: &str) {
             }
         }
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(windows)]
+    {
+        use windows::core::HSTRING;
+        use windows::Win32::UI::WindowsAndMessaging::{FindWindowW, SetWindowDisplayAffinity, WDA_EXCLUDEFROMCAPTURE};
+        // Windows 10 2004 and later; on older versions the bar just stays visible.
+        match unsafe { FindWindowW(None, &HSTRING::from(title)) } {
+            Ok(hwnd) => {
+                if let Err(e) = unsafe { SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE) } {
+                    log::warn!("couldn't hide \"{title}\" from captures: {e}");
+                }
+            }
+            Err(e) => log::warn!("window \"{title}\" not found: {e}"),
+        }
+    }
+    #[cfg(not(any(target_os = "macos", windows)))]
     let _ = title;
 }
 

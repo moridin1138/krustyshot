@@ -27,6 +27,7 @@ Every crate uses `rustshot-i18n` for user-facing text (see [TRANSLATING.md](TRAN
 | [`egui-phosphor`](https://github.com/amPerl/egui-phosphor) | Phosphor icon font for the toolbar |
 | [`gif`](https://github.com/image-rs/image-gif) | Animated GIF recordings that store only changed areas |
 | `objc2` + `objc2-av-foundation`, `-app-kit`, `-core-video` | macOS: H.264 recording (AVAssetWriter), window levels, capture exclusion, the Touch Bar guard |
+| [`windows`](https://github.com/microsoft/windows-rs) | Windows: H.264 recording (Media Foundation), hiding the recording bar from captures |
 | [`fluent-bundle`](https://github.com/projectfluent/fluent-rs) + [`sys-locale`](https://github.com/1Password/sys-locale) | Translations and the system language |
 | [`fs4`](https://github.com/al8n/fs4-rs) | Free disk space |
 | [`ureq`](https://github.com/algesten/ureq) | The "Check for updates" request to GitHub |
@@ -113,11 +114,12 @@ Undo works by snapshot. Before each change the whole `Document` is pushed onto `
 - **Capture:** looks the display up itself (display handles can't move between threads on Windows), streams frames with xcap's `video_recorder`, keeps them on a steady grid at the chosen frame rate, crops them, and hands them on through a 4-frame queue. If the queue is full the frame is dropped and counted. Every 2 seconds it checks free space and stops if the disk is critically low.
 - **Encode:** feeds frames to a `VideoEncoder`:
   - `gif.rs` (all platforms) stores the first frame in full, then only the changed rectangle of each frame; unchanged frames extend the previous frame's delay.
-  - `mp4_macos.rs` uses AVAssetWriter (hardware H.264), which also scales to the output size. The bit rate is pixels × fps × a bits-per-pixel figure for the quality.
+  - `mp4_macos.rs` uses AVAssetWriter (hardware H.264), which also scales to the output size.
+  - `mp4_windows.rs` uses the Media Foundation Sink Writer (H.264, hardware where available). It is set up lazily on the encoder thread, because COM objects belong to the thread that creates them; frames are scaled on the CPU when the output is smaller, and passed as top-down RGB32.
 
-  MP4 on Windows (Media Foundation) and Linux (GStreamer) will be further `VideoEncoder` implementations; until then the MP4 option is hidden there and recordings fall back to GIF.
+  In both, the bit rate is pixels × fps × a bits-per-pixel figure for the quality. Linux MP4 (GStreamer) will be another `VideoEncoder`; until then the MP4 option is hidden there and recordings fall back to GIF.
 
-The app side (`recording_ui.rs`) shows the floating bar, which `platform::exclude_from_capture` keeps out of the recording on macOS (`NSWindow.sharingType = none`). `disk.rs` provides the free-space checks used before captures and in Settings.
+The app side (`recording_ui.rs`) shows the floating bar, which `platform::exclude_from_capture` keeps out of the recording on macOS (`NSWindow.sharingType = none`) and Windows 10 2004+ (`SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)`). `disk.rs` provides the free-space checks used before captures and in Settings.
 
 ## Settings (`rustshot-core::config`)
 
@@ -140,5 +142,5 @@ CI (`.github/workflows/ci.yml`) runs clippy with warnings as errors, plus the te
 ## Platform notes
 
 - **macOS:** needs Screen Recording permission (`permissions.rs`). Captures are refused with an explanation rather than producing wallpaper-only images when it is missing. Default hotkeys avoid ⌘⇧3/4/5. `touchbar_guard.rs` catches an exception AppKit's Touch Bar code raises at random (`-[_NSTouchBarFinderObservation invalidate]`), which otherwise crashes the app; its unit test reproduces the exception. Builds are signed with the project's self-signed certificate (`scripts/bundle-macos.sh`, see [RELEASING.md](RELEASING.md)) so permissions survive updates.
-- **Windows:** Greenshot's Print Screen hotkeys. Release builds use the GUI subsystem so no console window opens. Display handles can't cross threads, so recording looks the display up inside its capture thread. Recordings are GIF only, and the recording bar can appear in them (not yet excluded with `SetWindowDisplayAffinity`). Monitors with different scale factors are not yet tested.
+- **Windows:** Greenshot's Print Screen hotkeys. Release builds use the GUI subsystem so no console window opens. Display handles can't cross threads, so recording looks the display up inside its capture thread. MP4 recordings use Media Foundation; the recording bar is excluded from captures. Monitors with different scale factors are not yet tested.
 - **Linux:** works on X11. On Wayland, global hotkeys and window listing are limited by the compositor. Recordings are GIF only for now.

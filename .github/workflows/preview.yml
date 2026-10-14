@@ -1,0 +1,86 @@
+# Manual test builds: Actions → Preview build → Run workflow. Builds every
+# platform's package from the chosen branch and attaches them to the run as
+# artifacts (no release, no tag). Same steps as the release build.
+name: Preview build
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            name: macos-arm64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            name: macos-x86_64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            name: windows-x86_64
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            name: linux-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Linux system libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libxdo-dev libayatana-appindicator3-dev \
+            libxcb1-dev libxrandr-dev libdbus-1-dev libpipewire-0.3-dev libwayland-dev \
+            libegl-dev libgbm-dev
+      - name: Build
+        run: cargo build --release --locked -p rustshot-app --target ${{ matrix.target }}
+
+      - name: Package (macOS .app)
+        if: runner.os == 'macOS'
+        env:
+          MACOS_SIGNING_P12_BASE64: ${{ secrets.MACOS_SIGNING_P12_BASE64 }}
+          RUSTSHOT_SIGNING_PASSWORD: ${{ secrets.MACOS_SIGNING_PASSWORD }}
+        run: |
+          # Sign with Rustshot's self-signed certificate so macOS keeps
+          # permissions across updates (see scripts/make-signing-cert.sh).
+          if [ -n "$MACOS_SIGNING_P12_BASE64" ]; then
+            export RUSTSHOT_SIGNING_P12="$RUNNER_TEMP/rustshot-signing.p12"
+            echo "$MACOS_SIGNING_P12_BASE64" | base64 --decode > "$RUSTSHOT_SIGNING_P12"
+          else
+            echo "::warning::MACOS_SIGNING_P12_BASE64 is not set; building with an ad-hoc signature"
+          fi
+          scripts/bundle-macos.sh ${{ matrix.target }}
+          rm -f "$RUNNER_TEMP/rustshot-signing.p12"
+          cd target/${{ matrix.target }}/release/bundle
+          ditto -c -k --keepParent Rustshot.app "$GITHUB_WORKSPACE/Rustshot-${GITHUB_REF_NAME}-${{ matrix.name }}.zip"
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $dir = "Rustshot-$env:GITHUB_REF_NAME-${{ matrix.name }}"
+          New-Item -ItemType Directory $dir | Out-Null
+          Copy-Item target/${{ matrix.target }}/release/rustshot.exe $dir/
+          Copy-Item README.md, CHANGELOG.md, LICENSE $dir/ -ErrorAction SilentlyContinue
+          Compress-Archive $dir "$dir.zip"
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          dir="Rustshot-${GITHUB_REF_NAME}-${{ matrix.name }}"
+          mkdir "$dir"
+          cp target/${{ matrix.target }}/release/rustshot README.md CHANGELOG.md "$dir"/
+          cp LICENSE "$dir"/ 2>/dev/null || true
+          tar czf "$dir.tar.gz" "$dir"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.name }}
+          path: |
+            Rustshot-*.zip
+            Rustshot-*.tar.gz
+
