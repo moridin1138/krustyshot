@@ -114,7 +114,7 @@ impl Recording {
         let (out_w, out_h) = settings.output_size(crop.width, crop.height, scale);
         let fps = settings.effective_fps();
         // Sound only goes into MP4s.
-        let sources = if settings.format == VideoFormat::Mp4 && audio::supported() {
+        let mut sources = if settings.format == VideoFormat::Mp4 && audio::supported() {
             audio::AudioSources {
                 microphone: settings.microphone.then(|| settings.microphone_device.clone()),
                 system: settings.system_audio && audio::system_audio_supported(),
@@ -122,6 +122,13 @@ impl Recording {
         } else {
             audio::AudioSources::default()
         };
+        // Opening the microphone without permission makes macOS ask, and the
+        // system audio service then waits for an answer that can't be given
+        // mid-recording. Skip it instead; Settings asks.
+        if sources.microphone.is_some() && audio::microphone_access() != audio::MicrophoneAccess::Granted {
+            log::warn!("recording without the microphone: no permission");
+            sources.microphone = None;
+        }
         let with_audio = sources.any();
         if let Some(dir) = path.parent() {
             std::fs::create_dir_all(dir)?;
@@ -193,17 +200,9 @@ impl Recording {
                     });
                     let (recorder, frames) = monitor.video_recorder()?;
                     recorder.start()?;
-                    // A sound source that won't start doesn't stop the recording.
-                    let sound = if with_audio {
-                        audio::AudioCapture::start(&sources, started, audio_tx)
-                            .inspect_err(|e| log::warn!("recording without sound: {e:#}"))
-                            .ok()
-                    } else {
-                        None
-                    };
-                    Ok((recorder, frames, clicks, sound))
+                    Ok((recorder, frames, clicks))
                 })();
-                let (recorder, frames, clicks, _sound) = match started_recorder {
+                let (recorder, frames, clicks) = match started_recorder {
                     Ok(r) => {
                         let _ = ready_tx.send(Ok(()));
                         r
@@ -307,12 +306,32 @@ impl Recording {
         };
         if let Some(message) = failure {
             // Let both threads end before removing the file, so the encoder
-            // can't recreate it afterwards.
+            // can't recreate it afterwards. In the background: the caller is
+            // the UI, which must never wait on a stuck thread.
             stop.store(true, Ordering::Release);
-            let _ = capture.join();
-            let _ = encode.join();
-            let _ = std::fs::remove_file(path);
+            let path = path.to_path_buf();
+            std::thread::spawn(move || {
+                let _ = capture.join();
+                let _ = encode.join();
+                let _ = std::fs::remove_file(path);
+            });
             bail!(message);
+        }
+
+        // Sound runs on its own thread that nothing waits for. Audio services
+        // can block (on a permission prompt, or a busy device), and that must
+        // never hold up the picture, Stop, or the app. A source that won't
+        // start just leaves the track silent.
+        if with_audio {
+            let stop = stop.clone();
+            std::thread::Builder::new().name("rustshot-audio".into()).spawn(move || {
+                let _sound = audio::AudioCapture::start(&sources, started, audio_tx)
+                    .inspect_err(|e| log::warn!("recording without sound: {e:#}"))
+                    .ok();
+                while !stop.load(Ordering::Acquire) {
+                    std::thread::sleep(Duration::from_millis(50));
+                }
+            })?;
         }
 
         Ok(Self { stop, cancel, stats, started, path: path.to_path_buf(), reason, capture: Some(capture), encode: Some(encode) })

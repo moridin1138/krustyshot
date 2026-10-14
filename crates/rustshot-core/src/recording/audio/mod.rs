@@ -58,6 +58,70 @@ pub fn system_audio_supported() -> bool {
     false
 }
 
+/// Whether the app may use the microphone.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MicrophoneAccess {
+    Granted,
+    /// Turned off in System Settings.
+    Denied,
+    /// Not asked yet: [`request_microphone_access`] shows the system prompt.
+    NotAsked,
+}
+
+/// Microphone permission. Only macOS asks; elsewhere it is always granted
+/// (Windows' privacy switch just gives silence).
+pub fn microphone_access() -> MicrophoneAccess {
+    #[cfg(target_os = "macos")]
+    return mic_access_macos::status();
+    #[cfg(not(target_os = "macos"))]
+    MicrophoneAccess::Granted
+}
+
+/// Show the system's microphone prompt if it hasn't been answered yet.
+/// Returns at once. Call this from Settings, where the prompt can be
+/// answered, and never while recording: the system audio service waits for
+/// the answer, and opening the microphone first would make it ask then.
+pub fn request_microphone_access() {
+    #[cfg(target_os = "macos")]
+    mic_access_macos::request();
+}
+
+#[cfg(target_os = "macos")]
+mod mic_access_macos {
+    use block2::RcBlock;
+    use objc2::msg_send;
+    use objc2::runtime::{AnyClass, Bool};
+    use objc2_av_foundation::AVMediaTypeAudio;
+
+    use super::MicrophoneAccess;
+
+    fn class() -> Option<&'static AnyClass> {
+        AnyClass::get(c"AVCaptureDevice")
+    }
+
+    pub fn status() -> MicrophoneAccess {
+        let (Some(cls), Some(audio)) = (class(), unsafe { AVMediaTypeAudio }) else { return MicrophoneAccess::Denied };
+        // AVAuthorizationStatus: 0 not determined, 1 restricted, 2 denied, 3 authorized.
+        let status: isize = unsafe { msg_send![cls, authorizationStatusForMediaType: audio] };
+        match status {
+            3 => MicrophoneAccess::Granted,
+            0 => MicrophoneAccess::NotAsked,
+            _ => MicrophoneAccess::Denied,
+        }
+    }
+
+    pub fn request() {
+        if status() != MicrophoneAccess::NotAsked {
+            return;
+        }
+        let (Some(cls), Some(audio)) = (class(), unsafe { AVMediaTypeAudio }) else { return };
+        let done = RcBlock::new(|granted: Bool| log::info!("microphone access granted: {}", granted.as_bool()));
+        unsafe {
+            let _: () = msg_send![cls, requestAccessForMediaType: audio, completionHandler: &*done];
+        }
+    }
+}
+
 /// What to record.
 #[derive(Clone, Debug, Default)]
 pub struct AudioSources {

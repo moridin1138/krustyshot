@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 
 use chrono::{DateTime, Local};
 use global_hotkey::{GlobalHotKeyEvent, HotKeyState};
-use rustshot_core::recording::{CropRect, Recording, StopReason};
+use rustshot_core::recording::{audio, CropRect, Recording, StopReason};
 use rustshot_core::{capture, disk, output, permissions, Config, Destination, Region, RgbaImage, TrayClick};
 use rustshot_editor::{Editor, EditorRequest};
 use tray_icon::menu::MenuEvent;
@@ -384,6 +384,11 @@ impl App {
             &rustshot_core::filename::PatternContext { time: Local::now(), title: &title },
         );
         let path = output::unique_path(&self.config.output_dir, &stem, settings.format.extension());
+        // Without permission the recording goes ahead without the microphone
+        // (asking now would put the prompt behind the recording); say so.
+        if settings.has_sound() && settings.microphone && audio::microphone_access() != audio::MicrophoneAccess::Granted {
+            self.notice(&tr!("notice-no-microphone-title"), &tr!("notice-no-microphone-body"), false);
+        }
         match Recording::start(monitor_id, crop, scale, &settings, &path) {
             Ok(recording) => {
                 self.recording = Some(ActiveRecording::new(recording, region, monitor));

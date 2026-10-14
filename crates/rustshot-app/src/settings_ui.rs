@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use egui::{Color32, RichText, Ui};
 use egui_phosphor::regular as icon;
 use rustshot_core::config::{Hotkeys, RecordingSettings};
-use rustshot_core::recording::audio::{self, Microphone};
+use rustshot_core::recording::audio::{self, Microphone, MicrophoneAccess};
 use rustshot_core::filename::{self, PatternContext};
 use rustshot_core::update::{self, UpdateStatus};
 use rustshot_core::{autostart, disk, recording, Config, Destination, OutputFormat, TrayClick, VideoFormat, VideoQuality};
@@ -590,8 +590,19 @@ fn recording(ui: &mut Ui, d: &mut Config, display: Option<(u32, u32, f64)>, micr
 /// Microphone and system sound (MP4 only).
 fn sound(ui: &mut Ui, r: &mut RecordingSettings, microphones: &mut Option<Vec<Microphone>>) {
     row(ui, &tr!("rec-microphone"), Some(&tr!("rec-microphone-sub")), |ui| {
-        toggle(ui, &mut r.microphone);
+        // Ask now, while the prompt can be answered, never mid-recording.
+        if toggle(ui, &mut r.microphone).changed() && r.microphone {
+            audio::request_microphone_access();
+        }
     });
+    if r.microphone && audio::microphone_access() == MicrophoneAccess::Denied {
+        ui.horizontal(|ui| {
+            ui.label(RichText::new(format!("{}  {}", icon::WARNING, tr!("rec-microphone-denied"))).small());
+            if ui.small_button(tr!("button-open-settings")).clicked() {
+                rustshot_core::permissions::open_microphone_settings();
+            }
+        });
+    }
     if r.microphone {
         let mics = microphones.get_or_insert_with(audio::microphones);
         row(ui, &tr!("rec-microphone-device"), None, |ui| {

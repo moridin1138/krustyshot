@@ -49,6 +49,16 @@ pub fn reset_screen_capture_access() {
     }
 }
 
+/// Open System Settings at the microphone permissions (macOS).
+pub fn open_microphone_settings() {
+    #[cfg(target_os = "macos")]
+    {
+        let _ = std::process::Command::new("open")
+            .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")
+            .spawn();
+    }
+}
+
 /// Open the relevant System Settings pane, where supported.
 pub fn open_privacy_settings() {
     #[cfg(target_os = "macos")]

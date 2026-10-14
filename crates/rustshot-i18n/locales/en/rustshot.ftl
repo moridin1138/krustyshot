@@ -77,6 +77,7 @@ rec-show-clicks-sub = A ring appears where you click, so viewers can follow alon
 rec-system-audio = System sound
 rec-system-audio-sub = Record what your computer plays
 rec-system-audio-unavailable = Needs macOS 13 or later
+rec-microphone-denied = Microphone access is off for Rustshot
 
 ## Disk space
 
@@ -114,6 +115,8 @@ notice-hotkeys-title = Shortcuts
 notice-no-clipboard-image = There is no image on the clipboard.
 notice-open-image = Open image
 notice-recording-failed = Recording failed
+notice-no-microphone-title = Recording without the microphone
+notice-no-microphone-body = Rustshot doesn't have microphone access yet. Turn the Microphone switch off and on in Settings → Recording to be asked, or allow it in System Settings → Privacy & Security → Microphone.
 
 ## Screen Recording permission (macOS)
 
@@ -168,6 +171,7 @@ filter-images = Images
 button-cancel = Cancel
 button-change = Change…
 button-close = Close
+button-open-settings = Open Settings
 button-default = Default
 button-ok = OK
 button-show = Show

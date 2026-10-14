@@ -68,7 +68,7 @@ Download the package for your platform from the [releases page](https://github.c
 
 ### macOS permissions
 
-Screenshots and recordings need **Screen Recording** permission. macOS asks the first time Rustshot runs. If it's missing, Rustshot shows a window explaining how to turn it on (System Settings → Privacy & Security → Screen Recording, then restart Rustshot); when running with `cargo run`, give the permission to your terminal app instead. Recording the microphone also needs **Microphone** permission, which macOS asks for the first time you record with it on.
+Screenshots and recordings need **Screen Recording** permission. macOS asks the first time Rustshot runs. If it's missing, Rustshot shows a window explaining how to turn it on (System Settings → Privacy & Security → Screen Recording, then restart Rustshot); when running with `cargo run`, give the permission to your terminal app instead. Recording the microphone also needs **Microphone** permission, which macOS asks for when you turn the Microphone switch on in Settings → Recording.
 
 ## Build from source
 
