@@ -41,6 +41,7 @@ overlay-record-help-window = Enregistrer : cliquez sur une fenêtre  ·  Espace 
 ## Recording
 
 recording-bar-title = Enregistrement Rustshot
+recording-frame-title = Zone d'enregistrement Rustshot
 recording-discard = Supprimer
 recording-discard-body = L'enregistrement va s'arrêter et la vidéo sera supprimée. Cette action est irréversible.
 recording-discard-tip = Arrêter et supprimer cet enregistrement

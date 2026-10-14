@@ -11,6 +11,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - MP4 recording on Windows, using Windows' own H.264 encoder (Media Foundation), with the same quality, resolution and frame-rate settings as on macOS.
 - On Windows 10 (version 2004) and later, the recording bar is hidden from the recording, as on macOS.
 - Sound in MP4 recordings: the microphone (with a choice of device) and system sound, each turned on separately in Settings → Recording and mixed into one AAC track. System sound needs macOS 13 or later; on Windows it records what the default speakers or headphones play. Both are off by default. While recording, the bar shows a microphone and a speaker icon that blink with the red dot; click one to mute or unmute that source.
+- While recording a region or a window, the rest of the display is dimmed and a thin red line marks the recorded area. Clicks go straight through, and none of it appears in the recording.
+- The recording bar keeps every item in a fixed place, so the timer, size and icons don't shift as they change.
 - **Show mouse clicks** (Settings → Recording): a dot while the button is held and a fading ring where you click.
 
 ### Changed

@@ -41,6 +41,7 @@ overlay-record-help-window = Grabar: haz clic en una ventana  ·  Espacio: modo 
 ## Recording
 
 recording-bar-title = Grabación de Rustshot
+recording-frame-title = Área de grabación de Rustshot
 recording-discard = Descartar
 recording-discard-body = La grabación se detendrá y el vídeo se eliminará. No se puede deshacer.
 recording-discard-tip = Detener y descartar esta grabación

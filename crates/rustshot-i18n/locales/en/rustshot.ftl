@@ -41,6 +41,7 @@ overlay-record-help-window = Record: click a window  ·  Space: region mode  · 
 ## Recording
 
 recording-bar-title = Rustshot Recording
+recording-frame-title = Rustshot recording area
 recording-discard = Discard
 recording-discard-body = The recording will stop and the video will be deleted. This can't be undone.
 recording-discard-tip = Stop and discard this recording

@@ -41,6 +41,7 @@ overlay-record-help-window = Aufnehmen: Auf ein Fenster klicken  ·  Leertaste: 
 ## Recording
 
 recording-bar-title = Rustshot-Aufnahme
+recording-frame-title = Rustshot-Aufnahmebereich
 recording-discard = Verwerfen
 recording-discard-body = Die Aufnahme wird beendet und das Video gelöscht. Das lässt sich nicht widerrufen.
 recording-discard-tip = Aufnahme beenden und verwerfen

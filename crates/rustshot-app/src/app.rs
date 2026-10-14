@@ -435,6 +435,8 @@ impl App {
             self.finish_recording(false);
             return;
         }
+        // The frame first, so the bar (created after it) sits on top.
+        active.show_frame(ctx);
         match active.show_bar(ctx) {
             Some(BarAction::Stop) => self.finish_recording(false),
             Some(BarAction::Discard) => {
