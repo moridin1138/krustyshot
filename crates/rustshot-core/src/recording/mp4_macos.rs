@@ -9,12 +9,19 @@ use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2_av_foundation::{
     AVAssetWriter, AVAssetWriterInput, AVAssetWriterInputPixelBufferAdaptor, AVAssetWriterStatus, AVFileTypeMPEG4,
-    AVMediaTypeVideo, AVVideoAverageBitRateKey, AVVideoCodecKey, AVVideoCodecTypeH264, AVVideoCompressionPropertiesKey,
+    AVMediaTypeAudio, AVMediaTypeVideo, AVVideoAverageBitRateKey, AVVideoCodecKey, AVVideoCodecTypeH264, AVVideoCompressionPropertiesKey,
     AVVideoExpectedSourceFrameRateKey, AVVideoHeightKey, AVVideoMaxKeyFrameIntervalKey, AVVideoScalingModeKey,
     AVVideoScalingModeResizeAspect, AVVideoWidthKey,
 };
+use objc2_avf_audio::{AVEncoderBitRateKey, AVFormatIDKey, AVNumberOfChannelsKey, AVSampleRateKey};
+use objc2_core_audio_types::{
+    kAudioFormatFlagIsFloat, kAudioFormatFlagIsPacked, kAudioFormatLinearPCM, kAudioFormatMPEG4AAC, AudioStreamBasicDescription,
+};
 use objc2_core_foundation::{CFRetained, CFString};
-use objc2_core_media::CMTime;
+use objc2_core_media::{
+    kCMBlockBufferAssureMemoryNowFlag, CMAudioFormatDescriptionCreate, CMAudioSampleBufferCreateReadyWithPacketDescriptions,
+    CMBlockBuffer, CMFormatDescription, CMSampleBuffer, CMTime,
+};
 use objc2_core_video::{
     kCVPixelBufferHeightKey, kCVPixelBufferPixelFormatTypeKey, kCVPixelBufferWidthKey, kCVPixelFormatType_32BGRA,
     CVPixelBuffer, CVPixelBufferGetBaseAddress, CVPixelBufferGetBytesPerRow, CVPixelBufferLockBaseAddress,
@@ -22,7 +29,15 @@ use objc2_core_video::{
 };
 use objc2_foundation::{NSDictionary, NSNumber, NSString, NSURL};
 
+use super::audio::{AudioChunk, RATE};
+use crate::config::RecordingSettings;
 use super::{VideoEncoder, VideoFrame};
+
+struct AudioTrack {
+    input: Retained<AVAssetWriterInput>,
+    /// The format of the PCM handed to the writer: 48 kHz stereo float.
+    format: CFRetained<CMFormatDescription>,
+}
 
 pub struct Mp4Encoder {
     writer: Retained<AVAssetWriter>,
@@ -30,6 +45,7 @@ pub struct Mp4Encoder {
     adaptor: Retained<AVAssetWriterInputPixelBufferAdaptor>,
     pool: Option<Retained<CVPixelBufferPool>>,
     source: (u32, u32),
+    audio: Option<AudioTrack>,
     started: bool,
 }
 
@@ -47,8 +63,9 @@ fn dict(keys: &[&NSString], values: &[&AnyObject]) -> Retained<NSDictionary<NSSt
 
 impl Mp4Encoder {
     /// `source` is the size of the frames pushed; `output` the video size
-    /// (the writer scales); `bit_rate` in bits per second.
-    pub fn create(path: &Path, source: (u32, u32), output: (u32, u32), fps: u32, bit_rate: u64) -> Result<Self> {
+    /// (the writer scales); `bit_rate` in bits per second. With `audio`,
+    /// the file also gets an AAC sound track.
+    pub fn create(path: &Path, source: (u32, u32), output: (u32, u32), fps: u32, bit_rate: u64, audio: bool) -> Result<Self> {
         let _ = std::fs::remove_file(path);
         let url = NSURL::fileURLWithPath(&NSString::from_str(&path.to_string_lossy()));
         let writer = unsafe { AVAssetWriter::assetWriterWithURL_fileType_error(&url, AVFileTypeMPEG4.unwrap()) }
@@ -94,7 +111,46 @@ impl Mp4Encoder {
             }
             writer.addInput(&input);
         }
-        Ok(Self { writer, input, adaptor, pool: None, source, started: false })
+        let audio = if audio { Some(Self::audio_track(&writer)?) } else { None };
+        Ok(Self { writer, input, adaptor, pool: None, source, audio, started: false })
+    }
+
+    fn audio_track(writer: &AVAssetWriter) -> Result<AudioTrack> {
+        let keys = unsafe {
+            [AVFormatIDKey.unwrap(), AVSampleRateKey.unwrap(), AVNumberOfChannelsKey.unwrap(), AVEncoderBitRateKey.unwrap()]
+        };
+        let (format_id, rate, channels, bit_rate) = (
+            NSNumber::new_u32(kAudioFormatMPEG4AAC),
+            NSNumber::new_u32(RATE),
+            NSNumber::new_u32(2),
+            NSNumber::new_u64(RecordingSettings::AUDIO_BIT_RATE),
+        );
+        let settings = dict(&keys, &[&*format_id, &*rate, &*channels, &*bit_rate]);
+        let input = unsafe { AVAssetWriterInput::assetWriterInputWithMediaType_outputSettings(AVMediaTypeAudio.unwrap(), Some(&settings)) };
+        unsafe {
+            input.setExpectsMediaDataInRealTime(true);
+            if !writer.canAddInput(&input) {
+                bail!("the video writer rejected the sound settings");
+            }
+            writer.addInput(&input);
+        }
+        let asbd = AudioStreamBasicDescription {
+            mSampleRate: RATE as f64,
+            mFormatID: kAudioFormatLinearPCM,
+            mFormatFlags: kAudioFormatFlagIsFloat | kAudioFormatFlagIsPacked,
+            mBytesPerPacket: 8,
+            mFramesPerPacket: 1,
+            mBytesPerFrame: 8,
+            mChannelsPerFrame: 2,
+            mBitsPerChannel: 32,
+            mReserved: 0,
+        };
+        let mut format: *const CMFormatDescription = std::ptr::null();
+        let status = unsafe {
+            CMAudioFormatDescriptionCreate(None, NonNull::from(&asbd), 0, std::ptr::null(), 0, std::ptr::null(), None, NonNull::from(&mut format))
+        };
+        let format = NonNull::new(format.cast_mut()).filter(|_| status == 0).context("can't describe the sound format")?;
+        Ok(AudioTrack { input, format: unsafe { CFRetained::from_raw(format) } })
     }
 
     fn start(&mut self) -> Result<()> {
@@ -149,6 +205,53 @@ impl VideoEncoder for Mp4Encoder {
         Ok(())
     }
 
+    fn push_audio(&mut self, chunk: &AudioChunk) -> Result<()> {
+        if !self.started {
+            self.start()?;
+        }
+        let Some(track) = &self.audio else { return Ok(()) };
+        if chunk.frames.is_empty() || !unsafe { track.input.isReadyForMoreMediaData() } {
+            return Ok(());
+        }
+        let len = chunk.frames.len() * 8;
+        unsafe {
+            let mut block: *mut CMBlockBuffer = std::ptr::null_mut();
+            let r = CMBlockBuffer::create_with_memory_block(
+                None,
+                std::ptr::null_mut(),
+                len,
+                None,
+                std::ptr::null(),
+                0,
+                len,
+                kCMBlockBufferAssureMemoryNowFlag,
+                NonNull::from(&mut block),
+            );
+            let Some(block) = NonNull::new(block).filter(|_| r == 0) else { bail!("no sound buffer ({r})") };
+            let block = CFRetained::from_raw(block);
+            let r = CMBlockBuffer::replace_data_bytes(NonNull::from(&chunk.frames[0]).cast(), &block, 0, len);
+            if r != 0 {
+                bail!("can't fill the sound buffer ({r})");
+            }
+            let mut sample: *mut CMSampleBuffer = std::ptr::null_mut();
+            let r = CMAudioSampleBufferCreateReadyWithPacketDescriptions(
+                None,
+                &block,
+                &track.format,
+                chunk.frames.len() as isize,
+                CMTime::new(chunk.start as i64, RATE as i32),
+                std::ptr::null(),
+                NonNull::from(&mut sample),
+            );
+            let Some(sample) = NonNull::new(sample).filter(|_| r == 0) else { bail!("no sound sample ({r})") };
+            let sample = CFRetained::from_raw(sample);
+            if !track.input.appendSampleBuffer(&sample) {
+                bail!("the sound encoder stopped: {:?}", self.writer.error().map(|e| e.localizedDescription()));
+            }
+        }
+        Ok(())
+    }
+
     fn finish(mut self: Box<Self>) -> Result<()> {
         if !self.started {
             // No frames at all: still produce a valid (empty) file.
@@ -160,6 +263,9 @@ impl VideoEncoder for Mp4Encoder {
         });
         unsafe {
             self.input.markAsFinished();
+            if let Some(track) = &self.audio {
+                track.input.markAsFinished();
+            }
             self.writer.finishWritingWithCompletionHandler(&block);
         }
         done.recv_timeout(Duration::from_secs(30)).context("finishing the video timed out")?;
@@ -168,5 +274,50 @@ impl VideoEncoder for Mp4Encoder {
             bail!("the video wasn't finished ({status:?}): {:?}", unsafe { self.writer.error() }.map(|e| e.localizedDescription()));
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Two seconds of a moving bar and a 440 Hz tone: the file must have
+    /// both tracks, each about two seconds long.
+    #[test]
+    fn writes_video_and_sound() {
+        let path = std::env::temp_dir().join(format!("rustshot-mp4-audio-{}.mp4", std::process::id()));
+        let (w, h, fps) = (320u32, 240u32, 30u32);
+        let mut enc: Box<dyn VideoEncoder> = Box::new(Mp4Encoder::create(&path, (w, h), (w, h), fps, 1_000_000, true).unwrap());
+        let chunk = RATE as usize / fps as usize;
+        for i in 0..fps * 2 {
+            let rgba = (0..w * h).flat_map(|p| if p % w == i * 5 { [255, 0, 0, 255] } else { [20, 20, 20, 255] }).collect();
+            let pts = Duration::from_secs_f64(i as f64 / fps as f64);
+            enc.push(&VideoFrame { width: w, height: h, rgba, pts }).unwrap();
+            let start = i as u64 * chunk as u64;
+            let frames = (0..chunk)
+                .map(|j| {
+                    let t = (start + j as u64) as f32 / RATE as f32;
+                    let v = (t * 440.0 * std::f32::consts::TAU).sin() * 0.3;
+                    [v, v]
+                })
+                .collect();
+            enc.push_audio(&AudioChunk { start, frames }).unwrap();
+            // Real time, so the writer's inputs are ready.
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        enc.finish().unwrap();
+
+        let asset = unsafe {
+            objc2_av_foundation::AVURLAsset::URLAssetWithURL_options(
+                &NSURL::fileURLWithPath(&NSString::from_str(&path.to_string_lossy())),
+                None,
+            )
+        };
+        #[allow(deprecated)]
+        let (video, sound) = unsafe {
+            (asset.tracksWithMediaType(AVMediaTypeVideo.unwrap()).count(), asset.tracksWithMediaType(AVMediaTypeAudio.unwrap()).count())
+        };
+        let _ = std::fs::remove_file(&path);
+        assert_eq!((video, sound), (1, 1));
     }
 }

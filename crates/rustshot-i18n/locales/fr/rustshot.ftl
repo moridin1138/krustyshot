@@ -61,12 +61,22 @@ rec-fps = Images par seconde
 rec-fps-value = { $fps } i/s
 rec-full-resolution = Pleine résolution
 rec-full-resolution-sub = Sur les écrans haute résolution (Retina). Désactivée, l'image paraît identique à taille normale et prend environ quatre fois moins de place.
+rec-microphone = Microphone
+rec-microphone-default = Par défaut du système
+rec-microphone-device = Quel microphone
+rec-microphone-missing = Non connecté (micro par défaut utilisé)
+rec-microphone-sub = Enregistrer votre voix avec la vidéo
 rec-quality = Qualité
 rec-quality-high = Haute
 rec-quality-low = Basse
 rec-quality-medium = Moyenne
 rec-quality-sub = Une meilleure qualité prend plus d'espace disque
 rec-shortcut-hint = Démarrez et arrêtez les enregistrements depuis le menu ou avec le raccourci défini dans Raccourcis.
+rec-show-clicks = Afficher les clics de souris
+rec-show-clicks-sub = Un cercle apparaît là où vous cliquez, pour que le public suive
+rec-system-audio = Son du système
+rec-system-audio-sub = Enregistrer ce que joue votre ordinateur
+rec-system-audio-unavailable = Nécessite macOS 13 ou plus récent
 
 ## Disk space
 

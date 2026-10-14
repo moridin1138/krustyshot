@@ -158,6 +158,14 @@ pub struct RecordingSettings {
     /// Record at full Retina resolution instead of half.
     pub full_resolution: bool,
     pub fps: u32,
+    /// Draw a ring where the mouse is clicked.
+    pub show_clicks: bool,
+    /// Record the microphone (MP4 only).
+    pub microphone: bool,
+    /// Which microphone, by its system ID; `None` for the default one.
+    pub microphone_device: Option<String>,
+    /// Record what the computer plays (MP4 only; macOS 13 or later).
+    pub system_audio: bool,
 }
 
 impl Default for RecordingSettings {
@@ -167,6 +175,10 @@ impl Default for RecordingSettings {
             quality: VideoQuality::Medium,
             full_resolution: false,
             fps: 30,
+            show_clicks: false,
+            microphone: false,
+            microphone_device: None,
+            system_audio: false,
         }
     }
 }
@@ -176,6 +188,14 @@ impl RecordingSettings {
     pub const GIF_MAX_FPS: u32 = 15;
     /// GIF frames are scaled down to at most this width.
     pub const GIF_MAX_WIDTH: u32 = 1280;
+
+    /// The sound track's bit rate (AAC), bits per second.
+    pub const AUDIO_BIT_RATE: u64 = 128_000;
+
+    /// Whether recordings get a sound track (MP4 only).
+    pub fn has_sound(&self) -> bool {
+        self.format == VideoFormat::Mp4 && (self.microphone || self.system_audio)
+    }
 
     pub fn effective_fps(&self) -> u32 {
         match self.format {
@@ -206,7 +226,7 @@ impl RecordingSettings {
     pub fn bytes_per_minute(&self, w: u32, h: u32, scale: f64) -> u64 {
         let (ow, oh) = self.output_size(w, h, scale);
         match self.format {
-            VideoFormat::Mp4 => self.bit_rate(ow, oh) * 60 / 8,
+            VideoFormat::Mp4 => (self.bit_rate(ow, oh) + if self.has_sound() { Self::AUDIO_BIT_RATE } else { 0 }) * 60 / 8,
             VideoFormat::Gif => (ow as f64 * oh as f64 * self.effective_fps() as f64 * 60.0 * 0.12) as u64,
         }
     }
@@ -349,7 +369,7 @@ mod tests {
 
     #[test]
     fn recording_sizes_and_rates() {
-        let r = RecordingSettings { format: VideoFormat::Mp4, quality: VideoQuality::Medium, full_resolution: false, fps: 30 };
+        let r = RecordingSettings { format: VideoFormat::Mp4, quality: VideoQuality::Medium, full_resolution: false, fps: 30, ..Default::default() };
         // Half resolution on Retina, even dimensions.
         assert_eq!(r.output_size(2940, 1913, 2.0), (1470, 956));
         assert_eq!(RecordingSettings { full_resolution: true, ..r.clone() }.output_size(2940, 1912, 2.0), (2940, 1912));

@@ -9,22 +9,29 @@ use anyhow::{Context, Result};
 use image::{imageops, RgbaImage};
 use windows::core::HSTRING;
 use windows::Win32::Media::MediaFoundation::{
-    IMFAttributes, IMFMediaType, IMFSinkWriter, MFCreateAttributes, MFCreateMediaType, MFCreateMemoryBuffer, MFCreateSample,
-    MFCreateSinkWriterFromURL, MFMediaType_Video, MFShutdown, MFStartup, MFVideoFormat_H264, MFVideoFormat_RGB32,
-    MFVideoInterlace_Progressive, MF_MT_AVG_BITRATE, MF_MT_DEFAULT_STRIDE, MF_MT_FRAME_RATE, MF_MT_FRAME_SIZE,
+    IMFAttributes, IMFMediaType, IMFSinkWriter, MFAudioFormat_AAC, MFAudioFormat_PCM, MFCreateAttributes, MFCreateMediaType,
+    MFCreateMemoryBuffer, MFCreateSample, MFCreateSinkWriterFromURL, MFMediaType_Audio, MFMediaType_Video, MFShutdown, MFStartup,
+    MFVideoFormat_H264, MFVideoFormat_RGB32, MFVideoInterlace_Progressive, MF_MT_AUDIO_AVG_BYTES_PER_SECOND,
+    MF_MT_AUDIO_BITS_PER_SAMPLE, MF_MT_AUDIO_BLOCK_ALIGNMENT, MF_MT_AUDIO_NUM_CHANNELS, MF_MT_AUDIO_SAMPLES_PER_SECOND,
+    MF_MT_AVG_BITRATE, MF_MT_DEFAULT_STRIDE, MF_MT_FRAME_RATE, MF_MT_FRAME_SIZE,
     MF_MT_INTERLACE_MODE, MF_MT_MAJOR_TYPE, MF_MT_PIXEL_ASPECT_RATIO, MF_MT_SUBTYPE, MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS,
     MF_VERSION, MFSTARTUP_LITE,
 };
 use windows::Win32::System::Com::{CoInitializeEx, CoUninitialize, COINIT_MULTITHREADED};
 
+use super::audio::{AudioChunk, RATE};
+use crate::config::RecordingSettings;
 use super::{VideoEncoder, VideoFrame};
 
 /// 100-nanosecond units per second, Media Foundation's time base.
 const HNS_PER_SECOND: i64 = 10_000_000;
+/// AAC bit rate in bytes per second (the encoder accepts only a few values).
+const AAC_BYTES_PER_SECOND: u32 = (RecordingSettings::AUDIO_BIT_RATE / 8) as u32;
 
 struct Writer {
     sink: IMFSinkWriter,
     stream: u32,
+    audio_stream: Option<u32>,
 }
 
 pub struct Mp4Encoder {
@@ -32,6 +39,7 @@ pub struct Mp4Encoder {
     output: (u32, u32),
     fps: u32,
     bit_rate: u64,
+    audio: bool,
     writer: Option<Writer>,
     /// Media Foundation and COM were started on this thread and need shutting down.
     started: bool,
@@ -46,10 +54,28 @@ fn pack(hi: u32, lo: u32) -> u64 {
 }
 
 impl Mp4Encoder {
-    /// `output` is the video size (frames are scaled to it); `bit_rate` in bits per second.
-    pub fn create(path: &Path, output: (u32, u32), fps: u32, bit_rate: u64) -> Result<Self> {
+    /// `output` is the video size (frames are scaled to it); `bit_rate` in
+    /// bits per second. With `audio`, the file also gets an AAC sound track.
+    pub fn create(path: &Path, output: (u32, u32), fps: u32, bit_rate: u64, audio: bool) -> Result<Self> {
         let _ = std::fs::remove_file(path);
-        Ok(Self { path: path.to_path_buf(), output, fps, bit_rate, writer: None, started: false, frames: 0 })
+        Ok(Self { path: path.to_path_buf(), output, fps, bit_rate, audio, writer: None, started: false, frames: 0 })
+    }
+
+    /// 48 kHz stereo 16-bit: PCM in, or AAC out (with its bit rate).
+    fn audio_type(subtype: &windows::core::GUID, bytes_per_second: u32) -> Result<IMFMediaType> {
+        unsafe {
+            let t = MFCreateMediaType()?;
+            t.SetGUID(&MF_MT_MAJOR_TYPE, &MFMediaType_Audio)?;
+            t.SetGUID(&MF_MT_SUBTYPE, subtype)?;
+            t.SetUINT32(&MF_MT_AUDIO_BITS_PER_SAMPLE, 16)?;
+            t.SetUINT32(&MF_MT_AUDIO_SAMPLES_PER_SECOND, RATE)?;
+            t.SetUINT32(&MF_MT_AUDIO_NUM_CHANNELS, 2)?;
+            t.SetUINT32(&MF_MT_AUDIO_AVG_BYTES_PER_SECOND, bytes_per_second)?;
+            if *subtype == MFAudioFormat_PCM {
+                t.SetUINT32(&MF_MT_AUDIO_BLOCK_ALIGNMENT, 4)?;
+            }
+            Ok(t)
+        }
     }
 
     fn video_type(subtype: &windows::core::GUID, (w, h): (u32, u32), fps: u32) -> Result<IMFMediaType> {
@@ -88,8 +114,18 @@ impl Mp4Encoder {
             // A positive stride means rows run top to bottom (RGB32 defaults to bottom-up).
             input.SetUINT32(&MF_MT_DEFAULT_STRIDE, self.output.0 * 4)?;
             sink.SetInputMediaType(stream, &input, None).context("setting the encoder's input format")?;
+
+            let audio_stream = if self.audio {
+                let out = Self::audio_type(&MFAudioFormat_AAC, AAC_BYTES_PER_SECOND)?;
+                let s = sink.AddStream(&out).context("the AAC encoder rejected the settings")?;
+                let input = Self::audio_type(&MFAudioFormat_PCM, RATE * 4)?;
+                sink.SetInputMediaType(s, &input, None).context("setting the sound encoder's input format")?;
+                Some(s)
+            } else {
+                None
+            };
             sink.BeginWriting().context("starting to write the video")?;
-            self.writer = Some(Writer { sink, stream });
+            self.writer = Some(Writer { sink, stream, audio_stream });
         }
         Ok(())
     }
@@ -110,7 +146,7 @@ impl VideoEncoder for Mp4Encoder {
             scaled = imageops::thumbnail(&full, w, h);
             scaled.as_raw()
         };
-        let Writer { sink, stream } = self.writer.as_ref().unwrap();
+        let Writer { sink, stream, .. } = self.writer.as_ref().unwrap();
         let len = w * h * 4;
         unsafe {
             let buffer = MFCreateMemoryBuffer(len)?;
@@ -131,6 +167,36 @@ impl VideoEncoder for Mp4Encoder {
             sink.WriteSample(*stream, &sample).context("the encoder stopped")?;
         }
         self.frames += 1;
+        Ok(())
+    }
+
+    fn push_audio(&mut self, chunk: &AudioChunk) -> Result<()> {
+        if self.writer.is_none() {
+            self.start()?;
+        }
+        let Some(Writer { sink, audio_stream: Some(stream), .. }) = self.writer.as_ref() else { return Ok(()) };
+        if chunk.frames.is_empty() {
+            return Ok(());
+        }
+        let len = (chunk.frames.len() * 4) as u32;
+        unsafe {
+            let buffer = MFCreateMemoryBuffer(len)?;
+            let mut data: *mut u8 = std::ptr::null_mut();
+            buffer.Lock(&mut data, None, None)?;
+            let dst = std::slice::from_raw_parts_mut(data as *mut i16, chunk.frames.len() * 2);
+            for (f, d) in chunk.frames.iter().zip(dst.as_chunks_mut::<2>().0.iter_mut()) {
+                *d = [(f[0] * i16::MAX as f32) as i16, (f[1] * i16::MAX as f32) as i16];
+            }
+            buffer.Unlock()?;
+            buffer.SetCurrentLength(len)?;
+
+            let sample = MFCreateSample()?;
+            sample.AddBuffer(&buffer)?;
+            let to_hns = |frames: u64| (frames as i128 * HNS_PER_SECOND as i128 / RATE as i128) as i64;
+            sample.SetSampleTime(to_hns(chunk.start))?;
+            sample.SetSampleDuration(to_hns(chunk.frames.len() as u64))?;
+            sink.WriteSample(*stream, &sample).context("the sound encoder stopped")?;
+        }
         Ok(())
     }
 

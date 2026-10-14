@@ -27,6 +27,13 @@ mod imp {
     unsafe extern "C" {
         fn CGEventCreate(source: *const c_void) -> *const c_void;
         fn CGEventGetLocation(event: *const c_void) -> CGPoint;
+        fn CGEventSourceButtonState(state_id: i32, button: u32) -> bool;
+    }
+
+    /// Left or right button down. Reading button state needs no permission.
+    pub fn button_down() -> bool {
+        // kCGEventSourceStateCombinedSessionState = 0; left = 0, right = 1.
+        unsafe { CGEventSourceButtonState(0, 0) || CGEventSourceButtonState(0, 1) }
     }
     #[link(name = "CoreFoundation", kind = "framework")]
     unsafe extern "C" {
@@ -51,7 +58,13 @@ mod imp {
 #[cfg(windows)]
 mod imp {
     use windows_sys::Win32::Foundation::POINT;
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON, VK_RBUTTON};
     use windows_sys::Win32::UI::WindowsAndMessaging::GetCursorPos;
+
+    pub fn button_down() -> bool {
+        let down = |vk: u16| unsafe { GetAsyncKeyState(vk as i32) } as u16 & 0x8000 != 0;
+        down(VK_LBUTTON) || down(VK_RBUTTON)
+    }
 
     pub fn position() -> Option<(f64, f64)> {
         let mut p = POINT { x: 0, y: 0 };
@@ -65,10 +78,28 @@ mod imp {
     use x11rb::protocol::xproto::ConnectionExt;
 
     pub fn position() -> Option<(f64, f64)> {
-        let (conn, screen) = x11rb::connect(None).ok()?;
-        let root = conn.setup().roots.get(screen)?.root;
-        let reply = conn.query_pointer(root).ok()?.reply().ok()?;
-        Some((reply.root_x as f64, reply.root_y as f64))
+        Probe::new()?.sample().map(|(p, _)| p)
+    }
+
+    /// Keeps one X11 connection for repeated sampling.
+    pub struct Probe {
+        conn: x11rb::rust_connection::RustConnection,
+        root: u32,
+    }
+
+    impl Probe {
+        pub fn new() -> Option<Self> {
+            let (conn, screen) = x11rb::connect(None).ok()?;
+            let root = conn.setup().roots.get(screen)?.root;
+            Some(Self { conn, root })
+        }
+
+        pub fn sample(&mut self) -> Option<((f64, f64), bool)> {
+            let r = self.conn.query_pointer(self.root).ok()?.reply().ok()?;
+            let mask = u16::from(r.mask);
+            // Button1 (left) = 0x100, Button3 (right) = 0x400.
+            Some(((r.root_x as f64, r.root_y as f64), mask & 0x500 != 0))
+        }
     }
 }
 
@@ -76,6 +107,42 @@ mod imp {
 mod imp {
     pub fn position() -> Option<(f64, f64)> {
         None
+    }
+    pub fn button_down() -> bool {
+        false
+    }
+}
+
+/// Samples the pointer position (raw platform coordinates) and whether a
+/// mouse button is down, cheaply enough to call many times a second.
+pub struct Probe {
+    #[cfg(all(unix, not(target_os = "macos")))]
+    inner: Option<imp::Probe>,
+}
+
+impl Probe {
+    pub fn new() -> Self {
+        Self {
+            #[cfg(all(unix, not(target_os = "macos")))]
+            inner: imp::Probe::new(),
+        }
+    }
+
+    pub fn sample(&mut self) -> Option<((f64, f64), bool)> {
+        #[cfg(all(unix, not(target_os = "macos")))]
+        {
+            self.inner.as_mut()?.sample()
+        }
+        #[cfg(not(all(unix, not(target_os = "macos"))))]
+        {
+            Some((imp::position()?, imp::button_down()))
+        }
+    }
+}
+
+impl Default for Probe {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -15,7 +15,7 @@ A cross-platform screenshot tool modelled on [Greenshot](https://getgreenshot.or
 - Destination picker after each capture: open in editor, copy, save directly, save as
 - Image editor with Phosphor icons: select, move and resize, rectangle, ellipse, line, arrow, freehand, text, speech bubble, step counter, highlight (marker, spotlight, grey out the rest, magnify), obfuscate (pixelate or blur), crop, drop shadows, undo and redo
 - Effects: drop shadow, torn edges, border, greyscale, invert, rotate, resize
-- Screen recording of a region, a window or a whole display, to MP4 (macOS and Windows) or GIF (all platforms), with quality, resolution and frame-rate settings and a size estimate
+- Screen recording of a region, a window or a whole display, to MP4 (macOS and Windows) or GIF (all platforms), with quality, resolution and frame-rate settings and a size estimate; MP4s can include the microphone and system sound, and clicks can be shown
 - Low disk space warnings for the screenshots folder, and recordings that stop safely before the disk fills
 - Notifications after saving or copying (click to show the file)
 - English, French, Spanish and German interface, following the system language
@@ -40,7 +40,7 @@ Change them in Settings (click a shortcut and press the new keys). macOS keeps �
 
 Choose **Record region…**, **Record window…** or **Record full screen** from the menu-bar icon, or press the recording shortcut (⌥⇧V on macOS) and drag a region. A small bar shows the time and file size, with **Stop** and **Discard** (which asks before deleting). Press the shortcut again, or choose **Stop recording** from the menu, to finish. The file is saved to your output folder, and a notification lets you show it.
 
-Settings → Recording chooses MP4 or GIF, the quality, full or half resolution on Retina displays, and the frame rate, and estimates how much space a minute takes. MP4 recording works on macOS and Windows; Linux records GIFs for now. Recordings use one display at a time.
+Settings → Recording chooses MP4 or GIF, the quality, full or half resolution on Retina displays, and the frame rate, and estimates how much space a minute takes. For MP4s you can also record the **microphone** (pick which one) and **system sound** (macOS 13 or later, and Windows), and turn on **Show mouse clicks**. GIFs have no sound. MP4 recording works on macOS and Windows; Linux records GIFs for now. Recordings use one display at a time.
 
 ### Editor shortcuts
 
@@ -68,7 +68,7 @@ Download the package for your platform from the [releases page](https://github.c
 
 ### macOS permissions
 
-Screenshots and recordings need **Screen Recording** permission. macOS asks the first time Rustshot runs. If it's missing, Rustshot shows a window explaining how to turn it on (System Settings → Privacy & Security → Screen Recording, then restart Rustshot); when running with `cargo run`, give the permission to your terminal app instead.
+Screenshots and recordings need **Screen Recording** permission. macOS asks the first time Rustshot runs. If it's missing, Rustshot shows a window explaining how to turn it on (System Settings → Privacy & Security → Screen Recording, then restart Rustshot); when running with `cargo run`, give the permission to your terminal app instead. Recording the microphone also needs **Microphone** permission, which macOS asks for the first time you record with it on.
 
 ## Build from source
 
@@ -98,7 +98,7 @@ The bundle is written to `target/release/bundle/Rustshot.app` and runs as a menu
 | `cargo xtask icons` | Regenerate the app icons in `assets/icons/` |
 | `scripts/bundle-macos.sh` | Package a release build as `Rustshot.app` (macOS) |
 | `cargo run -p rustshot-editor --example sample -- out.png` | Render every annotation type into a sample image, to check how they look |
-| `cargo run --release -p rustshot-core --example record -- out.mp4 5 medium` | Record the main display for 5 seconds without the app (`.gif` for GIF; add `full` for full resolution) |
+| `cargo run --release -p rustshot-core --example record -- out.mp4 5 medium` | Record the main display for 5 seconds without the app (`.gif` for GIF; add `full` for full resolution, `mic` and `system` for sound; `list` instead of a path lists microphones) |
 | `cargo check-windows` | Lint the Windows build from macOS (once: `rustup target add x86_64-pc-windows-gnu`) |
 | `RUSTSHOT_LANG=fr cargo run -p rustshot-app` | Run in a particular language |
 

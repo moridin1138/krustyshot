@@ -5,6 +5,8 @@
 //! and crops them; the other encodes. If the encoder falls behind, frames are
 //! dropped (and counted) rather than piling up in memory.
 
+pub mod audio;
+mod clicks;
 mod gif;
 #[cfg(target_os = "macos")]
 mod mp4_macos;
@@ -13,7 +15,7 @@ mod mp4_windows;
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::mpsc::{sync_channel, TrySendError};
+use std::sync::mpsc::{sync_channel, RecvTimeoutError, TrySendError};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
@@ -35,8 +37,15 @@ pub struct VideoFrame {
 /// Something that turns frames into a file.
 pub trait VideoEncoder: Send {
     fn push(&mut self, frame: &VideoFrame) -> Result<()>;
+    /// Add mixed sound. Formats without sound ignore it.
+    fn push_audio(&mut self, _chunk: &audio::AudioChunk) -> Result<()> {
+        Ok(())
+    }
     fn finish(self: Box<Self>) -> Result<()>;
 }
+
+/// How long to wait for every sound source before mixing a moment of audio.
+const AUDIO_LATENCY: Duration = Duration::from_millis(250);
 
 /// Whether this platform can record `format`.
 pub fn supports(format: VideoFormat) -> bool {
@@ -104,6 +113,16 @@ impl Recording {
         }
         let (out_w, out_h) = settings.output_size(crop.width, crop.height, scale);
         let fps = settings.effective_fps();
+        // Sound only goes into MP4s.
+        let sources = if settings.format == VideoFormat::Mp4 && audio::supported() {
+            audio::AudioSources {
+                microphone: settings.microphone.then(|| settings.microphone_device.clone()),
+                system: settings.system_audio && audio::system_audio_supported(),
+            }
+        } else {
+            audio::AudioSources::default()
+        };
+        let with_audio = sources.any();
         if let Some(dir) = path.parent() {
             std::fs::create_dir_all(dir)?;
         }
@@ -116,19 +135,27 @@ impl Recording {
                 (out_w, out_h),
                 fps,
                 settings.bit_rate(out_w, out_h),
+                with_audio,
             )?),
             #[cfg(windows)]
-            VideoFormat::Mp4 => Box::new(mp4_windows::Mp4Encoder::create(path, (out_w, out_h), fps, settings.bit_rate(out_w, out_h))?),
+            VideoFormat::Mp4 => Box::new(mp4_windows::Mp4Encoder::create(
+                path,
+                (out_w, out_h),
+                fps,
+                settings.bit_rate(out_w, out_h),
+                with_audio,
+            )?),
             #[cfg(not(any(target_os = "macos", windows)))]
             VideoFormat::Mp4 => unreachable!(),
         };
         log::info!(
-            "recording {}x{} crop of display {monitor_id} to {}x{} {} at {fps} fps -> {}",
+            "recording {}x{} crop of display {monitor_id} to {}x{} {} at {fps} fps, sound {:?} -> {}",
             crop.width,
             crop.height,
             out_w,
             out_h,
             settings.format.extension(),
+            sources,
             path.display()
         );
 
@@ -137,7 +164,9 @@ impl Recording {
         let stats = Arc::new(Stats::default());
         let reason = Arc::new(Mutex::new(None));
         let started = Instant::now();
+        let show_clicks = settings.show_clicks;
         let (tx, rx) = sync_channel::<VideoFrame>(4);
+        let (audio_tx, audio_rx) = std::sync::mpsc::channel::<audio::SourceChunk>();
 
         // Capture thread. The display is looked up inside it, because display
         // handles can't move between threads on every platform; it reports
@@ -152,11 +181,29 @@ impl Recording {
                         .into_iter()
                         .find(|m| m.id().ok() == Some(monitor_id))
                         .context("that display is no longer connected")?;
+                    let clicks = show_clicks.then(|| {
+                        let display_scale = monitor.scale_factor().unwrap_or(1.0).max(1.0);
+                        let mapping = clicks::PointerMapping {
+                            origin: (monitor.x().unwrap_or(0) as f64, monitor.y().unwrap_or(0) as f64),
+                            // macOS reports the pointer in points; elsewhere in pixels.
+                            factor: if cfg!(target_os = "macos") { display_scale as f64 } else { 1.0 },
+                            crop: (crop.x, crop.y),
+                        };
+                        clicks::ClickTracker::start(mapping, display_scale, started, stop.clone())
+                    });
                     let (recorder, frames) = monitor.video_recorder()?;
                     recorder.start()?;
-                    Ok((recorder, frames))
+                    // A sound source that won't start doesn't stop the recording.
+                    let sound = if with_audio {
+                        audio::AudioCapture::start(&sources, started, audio_tx)
+                            .inspect_err(|e| log::warn!("recording without sound: {e:#}"))
+                            .ok()
+                    } else {
+                        None
+                    };
+                    Ok((recorder, frames, clicks, sound))
                 })();
-                let (recorder, frames) = match started_recorder {
+                let (recorder, frames, clicks, _sound) = match started_recorder {
                     Ok(r) => {
                         let _ = ready_tx.send(Ok(()));
                         r
@@ -193,7 +240,10 @@ impl Recording {
                         next_due = pts + interval;
                     }
                     match crop_frame(&frame.raw, frame.width, frame.height, crop) {
-                        Some(rgba) => {
+                        Some(mut rgba) => {
+                            if let Some(c) = &clicks {
+                                c.draw(&mut rgba, crop.width, crop.height, pts);
+                            }
                             let vf = VideoFrame { width: crop.width, height: crop.height, rgba, pts };
                             match tx.try_send(vf) {
                                 Ok(()) => {}
@@ -215,9 +265,36 @@ impl Recording {
         let encode = {
             let stats = stats.clone();
             std::thread::Builder::new().name("rustshot-encode".into()).spawn(move || -> Result<()> {
-                for frame in rx {
-                    encoder.push(&frame)?;
-                    stats.frames.fetch_add(1, Ordering::Relaxed);
+                let mut mixer = audio::Mixer::default();
+                let position = |t: Duration| (t.as_secs_f64() * audio::RATE as f64) as u64;
+                loop {
+                    match rx.recv_timeout(Duration::from_millis(50)) {
+                        Ok(frame) => {
+                            encoder.push(&frame)?;
+                            stats.frames.fetch_add(1, Ordering::Relaxed);
+                        }
+                        Err(RecvTimeoutError::Timeout) => {}
+                        Err(RecvTimeoutError::Disconnected) => break,
+                    }
+                    if with_audio {
+                        // Mix what has arrived, leaving the most recent
+                        // moment open for sources that deliver late. Where
+                        // no source had sound, the track gets silence.
+                        for chunk in audio_rx.try_iter() {
+                            mixer.add(&chunk);
+                        }
+                        if let Some(chunk) = mixer.take_until(position(started.elapsed().saturating_sub(AUDIO_LATENCY))) {
+                            encoder.push_audio(&chunk)?;
+                        }
+                    }
+                }
+                if with_audio {
+                    for chunk in audio_rx.try_iter() {
+                        mixer.add(&chunk);
+                    }
+                    if let Some(chunk) = mixer.take_until(position(started.elapsed())) {
+                        encoder.push_audio(&chunk)?;
+                    }
                 }
                 encoder.finish()
             })?

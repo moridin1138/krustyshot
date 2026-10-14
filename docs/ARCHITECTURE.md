@@ -26,7 +26,8 @@ Every crate uses `rustshot-i18n` for user-facing text (see [TRANSLATING.md](TRAN
 | [`rfd`](https://github.com/PolyMeilex/rfd) | Native open, save and message dialogs |
 | [`egui-phosphor`](https://github.com/amPerl/egui-phosphor) | Phosphor icon font for the toolbar |
 | [`gif`](https://github.com/image-rs/image-gif) | Animated GIF recordings that store only changed areas |
-| `objc2` + `objc2-av-foundation`, `-app-kit`, `-core-video` | macOS: H.264 recording (AVAssetWriter), window levels, capture exclusion, the Touch Bar guard |
+| `objc2` + `objc2-av-foundation`, `-app-kit`, `-core-video`, `-core-media` | macOS: H.264 and AAC recording (AVAssetWriter), ScreenCaptureKit system sound, window levels, capture exclusion, the Touch Bar guard |
+| [`cpal`](https://github.com/RustAudio/cpal) | Microphone recording on macOS and Windows, and Windows system sound (loopback) |
 | [`windows`](https://github.com/microsoft/windows-rs) | Windows: H.264 recording (Media Foundation), hiding the recording bar from captures |
 | [`fluent-bundle`](https://github.com/projectfluent/fluent-rs) + [`sys-locale`](https://github.com/1Password/sys-locale) | Translations and the system language |
 | [`fs4`](https://github.com/al8n/fs4-rs) | Free disk space |
@@ -119,6 +120,9 @@ Undo works by snapshot. Before each change the whole `Document` is pushed onto `
 
   In both, the bit rate is pixels × fps × a bits-per-pixel figure for the quality. Linux MP4 (GStreamer) will be another `VideoEncoder`; until then the MP4 option is hidden there and recordings fall back to GIF.
 
+- **Sound (`audio/`):** when the microphone or system sound is on (MP4 only), the capture thread also starts an `AudioCapture`. The microphone comes through `cpal` (CoreAudio, WASAPI); Windows system sound is a `cpal` input stream on the default output device (WASAPI loopback); macOS system sound uses ScreenCaptureKit (`system_macos.rs`), loaded at run time and driven by messages so the app still starts on macOS 11 and 12, where the option is greyed out. Each source converts its audio to 48 kHz stereo and places it on the recording timeline by counting samples (`SourceClock`, which resynchronises after a gap). The encoder thread mixes the sources (`Mixer`), filling silence where there is none, 250 ms behind real time so late sources still make it, and passes it to `VideoEncoder::push_audio`: an AAC track via AVAssetWriter on macOS and the Sink Writer on Windows. A source that fails to start is logged and the recording goes on without it.
+- **Clicks (`clicks.rs`):** with Show mouse clicks on, a thread polls the mouse buttons every 10 ms and the capture thread draws a dot or fading ring onto each frame.
+
 The app side (`recording_ui.rs`) shows the floating bar, which `platform::exclude_from_capture` keeps out of the recording on macOS (`NSWindow.sharingType = none`) and Windows 10 2004+ (`SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)`). `disk.rs` provides the free-space checks used before captures and in Settings.
 
 ## Settings (`rustshot-core::config`)
@@ -127,7 +131,7 @@ The app side (`recording_ui.rs`) shows the floating bar, which `platform::exclud
 
 ## Testing
 
-Unit tests sit next to the code and cover the parts that don't need a display: geometry and crop maths, Retina scaling, stitching and recording targets, filename patterns, config round-trips and recording sizes, saving every format, disk-space thresholds, GIF change detection and frame merging, hit testing, undo and redo, crop, the pixel effects, export rendering, the shortcut recorder, every translation file being complete, and the Touch Bar crash guard (which reproduces the AppKit exception). Run them with `cargo test`. Capture and UI behaviour is checked by hand (see the release checklist in [RELEASING.md](RELEASING.md)).
+Unit tests sit next to the code and cover the parts that don't need a display: geometry and crop maths, Retina scaling, stitching and recording targets, filename patterns, config round-trips and recording sizes, saving every format, disk-space thresholds, GIF change detection and frame merging, sound conversion, timing and mixing, MP4s with a sound track (macOS), click drawing, hit testing, undo and redo, crop, the pixel effects, export rendering, the shortcut recorder, every translation file being complete, and the Touch Bar crash guard (which reproduces the AppKit exception). Run them with `cargo test`. Capture and UI behaviour is checked by hand (see the release checklist in [RELEASING.md](RELEASING.md)).
 
 Debug builds have three developer switches (environment variables, ignored in release builds):
 

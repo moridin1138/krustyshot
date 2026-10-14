@@ -24,7 +24,7 @@ xcap = "0.9.8"
 
 [target."cfg(windows)".dependencies]
 windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Media_MediaFoundation", "Win32_System_Com"] }
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
 
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
 x11rb = "0.13"
@@ -34,6 +34,11 @@ block2 = "0.6"
 objc2 = "0.6"
 objc2-av-foundation = { version = "0.3", features = ["AVAssetWriter", "AVAssetWriterInput", "AVMediaFormat", "AVVideoSettings", "objc2-core-media", "objc2-core-video", "block2"] }
 objc2-core-foundation = { version = "0.3", features = ["CFString", "CFDictionary", "CFNumber"] }
-objc2-core-media = { version = "0.3", features = ["CMTime"] }
+objc2-core-media = { version = "0.3", features = ["CMTime", "CMBlockBuffer", "CMFormatDescription", "CMSampleBuffer", "objc2-core-audio-types"] }
+objc2-core-audio-types = "0.3"
+objc2-avf-audio = { version = "0.3", default-features = false, features = ["std", "AVAudioSettings"] }
 objc2-core-video = "0.3"
-objc2-foundation = { version = "0.3", features = ["NSString", "NSURL", "NSDictionary", "NSValue", "NSError", "NSObject"] }
+objc2-foundation = { version = "0.3", features = ["NSString", "NSURL", "NSDictionary", "NSValue", "NSError", "NSObject", "NSProcessInfo", "NSArray"] }
+
+[target.'cfg(any(target_os = "macos", windows))'.dependencies]
+cpal = "0.18"

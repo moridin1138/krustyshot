@@ -32,5 +32,7 @@
 	<string>Copyright © 2026 moridin1138. PolyForm Shield 1.0.0.</string>
 	<key>NSScreenCaptureUsageDescription</key>
 	<string>Rustshot needs screen recording access to take screenshots.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Rustshot records your microphone into screen recordings when you turn that on in Settings.</string>
 </dict>
 </plist>

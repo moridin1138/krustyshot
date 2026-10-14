@@ -4,7 +4,8 @@ use std::sync::{Arc, Mutex};
 
 use egui::{Color32, RichText, Ui};
 use egui_phosphor::regular as icon;
-use rustshot_core::config::Hotkeys;
+use rustshot_core::config::{Hotkeys, RecordingSettings};
+use rustshot_core::recording::audio::{self, Microphone};
 use rustshot_core::filename::{self, PatternContext};
 use rustshot_core::update::{self, UpdateStatus};
 use rustshot_core::{autostart, disk, recording, Config, Destination, OutputFormat, TrayClick, VideoFormat, VideoQuality};
@@ -123,6 +124,8 @@ pub struct SettingsWindow {
     update: Arc<Mutex<UpdateCheck>>,
     /// Primary display size in pixels and its scale, for size estimates.
     display: Option<(u32, u32, f64)>,
+    /// Connected microphones, listed when first needed.
+    microphones: Option<Vec<Microphone>>,
     /// Debug builds: RUSTSHOT_SETTINGS_TOUR=<dir> saves a picture of each
     /// section (just this window), for reviewing the design.
     tour: Option<Tour>,
@@ -148,6 +151,7 @@ impl SettingsWindow {
             autostart_error: None,
             update: Arc::default(),
             display: rustshot_core::capture::primary_display_pixels(),
+            microphones: None,
             tour: cfg!(debug_assertions)
                 .then(|| std::env::var_os("RUSTSHOT_SETTINGS_TOUR"))
                 .flatten()
@@ -216,7 +220,7 @@ impl SettingsWindow {
                         match self.section {
                             Section::General => self.general(ui, &mut draft),
                             Section::Capture => capture(ui, &mut draft),
-                            Section::Recording => recording(ui, &mut draft, self.display),
+                            Section::Recording => recording(ui, &mut draft, self.display, &mut self.microphones),
                             Section::Shortcuts => self.shortcuts(ui, &mut draft, hotkey_errors),
                             Section::Saving => saving(ui, &mut draft),
                             Section::About => self.about(ui, &mut draft),
@@ -515,7 +519,7 @@ fn capture(ui: &mut Ui, d: &mut Config) {
     });
 }
 
-fn recording(ui: &mut Ui, d: &mut Config, display: Option<(u32, u32, f64)>) {
+fn recording(ui: &mut Ui, d: &mut Config, display: Option<(u32, u32, f64)>, microphones: &mut Option<Vec<Microphone>>) {
     let r = &mut d.recording;
     let mp4_available = recording::supports(VideoFormat::Mp4);
     group(ui, |ui| {
@@ -562,6 +566,14 @@ fn recording(ui: &mut Ui, d: &mut Config, display: Option<(u32, u32, f64)>) {
             }
             segmented(ui, &mut r.fps, &options);
         });
+        divider(ui);
+        row(ui, &tr!("rec-show-clicks"), Some(&tr!("rec-show-clicks-sub")), |ui| {
+            toggle(ui, &mut r.show_clicks);
+        });
+        if r.format == VideoFormat::Mp4 && audio::supported() {
+            divider(ui);
+            sound(ui, r, microphones);
+        }
         if let Some((w, h, scale)) = display {
             divider(ui);
             let per_minute = disk::format_bytes(r.bytes_per_minute(w, h, scale));
@@ -573,6 +585,44 @@ fn recording(ui: &mut Ui, d: &mut Config, display: Option<(u32, u32, f64)>) {
         }
     });
     ui.weak(tr!("rec-shortcut-hint"));
+}
+
+/// Microphone and system sound (MP4 only).
+fn sound(ui: &mut Ui, r: &mut RecordingSettings, microphones: &mut Option<Vec<Microphone>>) {
+    row(ui, &tr!("rec-microphone"), Some(&tr!("rec-microphone-sub")), |ui| {
+        toggle(ui, &mut r.microphone);
+    });
+    if r.microphone {
+        let mics = microphones.get_or_insert_with(audio::microphones);
+        row(ui, &tr!("rec-microphone-device"), None, |ui| {
+            let default = tr!("rec-microphone-default");
+            let selected = match &r.microphone_device {
+                None => default.clone(),
+                Some(id) => mics
+                    .iter()
+                    .find(|m| &m.id == id)
+                    .map(|m| m.name.clone())
+                    .unwrap_or_else(|| tr!("rec-microphone-missing")),
+            };
+            egui::ComboBox::from_id_salt("microphone").selected_text(selected).width(220.0).show_ui(ui, |ui| {
+                ui.selectable_value(&mut r.microphone_device, None, default);
+                for m in mics.iter() {
+                    ui.selectable_value(&mut r.microphone_device, Some(m.id.clone()), &m.name);
+                }
+            });
+        });
+    }
+    divider(ui);
+    let system_ok = audio::system_audio_supported();
+    let sub = if system_ok { tr!("rec-system-audio-sub") } else { tr!("rec-system-audio-unavailable") };
+    row(ui, &tr!("rec-system-audio"), Some(&sub), |ui| {
+        ui.add_enabled_ui(system_ok, |ui| {
+            let mut on = r.system_audio && system_ok;
+            if toggle(ui, &mut on).changed() {
+                r.system_audio = on;
+            }
+        });
+    });
 }
 
 fn saving(ui: &mut Ui, d: &mut Config) {

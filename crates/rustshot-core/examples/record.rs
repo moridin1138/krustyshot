@@ -1,8 +1,10 @@
 //! Dev tool: record the primary display without the app.
 //!
-//!   cargo run --release -p rustshot-core --example record -- out.mp4 [seconds] [low|medium|high] [full]
+//!   cargo run --release -p rustshot-core --example record -- out.mp4 [seconds] [low|medium|high] [full] [mic] [system]
 //!
-//! The format follows the file extension (.mp4 or .gif).
+//! The format follows the file extension (.mp4 or .gif). `mic` and `system`
+//! add the default microphone and system sound (MP4 only); with `list`
+//! instead of a path, the microphones are listed.
 
 use std::time::Duration;
 
@@ -11,16 +13,32 @@ use rustshot_core::{RecordingSettings, VideoFormat, VideoQuality};
 
 fn main() -> anyhow::Result<()> {
     let mut args = std::env::args().skip(1);
-    let path = std::path::PathBuf::from(args.next().expect("output path"));
+    let first = args.next().expect("output path");
+    if first == "list" {
+        for m in rustshot_core::recording::audio::microphones() {
+            println!("{}  {}", m.id, m.name);
+        }
+        println!("system sound supported: {}", rustshot_core::recording::audio::system_audio_supported());
+        return Ok(());
+    }
+    let path = std::path::PathBuf::from(first);
     let secs: f64 = args.next().and_then(|s| s.parse().ok()).unwrap_or(5.0);
     let quality = match args.next().as_deref() {
         Some("low") => VideoQuality::Low,
         Some("high") => VideoQuality::High,
         _ => VideoQuality::Medium,
     };
-    let full_resolution = args.next().as_deref() == Some("full");
+    let rest: Vec<String> = args.collect();
+    let has = |flag: &str| rest.iter().any(|a| a == flag);
     let format = if path.extension().is_some_and(|e| e == "gif") { VideoFormat::Gif } else { VideoFormat::Mp4 };
-    let settings = RecordingSettings { format, quality, full_resolution, ..RecordingSettings::default() };
+    let settings = RecordingSettings {
+        format,
+        quality,
+        full_resolution: has("full"),
+        microphone: has("mic"),
+        system_audio: has("system"),
+        ..RecordingSettings::default()
+    };
 
     let monitors = xcap::Monitor::all()?;
     let m = monitors.iter().find(|m| m.is_primary().unwrap_or(false)).unwrap_or(&monitors[0]);

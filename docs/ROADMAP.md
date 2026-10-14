@@ -25,8 +25,8 @@ Released in 0.3.0: the redesigned Settings window, shortcut recorder, open at lo
 ## Video
 
 - Released in 0.4.0: region, window and display recording; MP4 on macOS, GIF everywhere; quality settings; disk-space safeguards.
-- Done (unreleased): MP4 on Windows (Media Foundation), and the recording bar hidden from Windows recordings.
-- Next: microphone and system audio, showing mouse clicks, MP4 on Linux (GStreamer), regions that span displays.
+- Done (unreleased): MP4 on Windows (Media Foundation), the recording bar hidden from Windows recordings, microphone and system sound in MP4s, showing mouse clicks.
+- Next: MP4 and sound on Linux (GStreamer, PipeWire), regions that span displays.
 
 ## Backlog
 
