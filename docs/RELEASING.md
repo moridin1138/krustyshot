@@ -19,7 +19,7 @@ Every pull request or change that users would notice adds a line under `## [Unre
 
 ## Release checklist
 
-1. **Make sure `main` is green.** CI passes on all three platforms.
+1. **Make sure `main` is green.** CI passes on all three platforms. Before pushing, catch Windows-only problems locally with `cargo check-windows` (needs `rustup target add x86_64-pc-windows-gnu` once); Linux is only checked in CI.
 2. **Test a local release build on macOS.** Running with `cargo run` is not enough: it borrows your terminal's Screen Recording permission and hides permission and packaging bugs. Instead:
    ```bash
    cargo build --release -p rustshot-app

@@ -1,2 +1,4 @@
 [alias]
 xtask = "run --quiet -p xtask --"
+# Lint the Windows build from macOS (needs `rustup target add x86_64-pc-windows-gnu`).
+check-windows = "clippy --all-targets --target x86_64-pc-windows-gnu -- -D warnings"

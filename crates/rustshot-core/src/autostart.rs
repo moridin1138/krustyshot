@@ -8,6 +8,7 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 
+#[cfg(target_os = "macos")]
 const LABEL: &str = "org.rustshot.Rustshot";
 
 fn exe() -> Result<PathBuf> {
