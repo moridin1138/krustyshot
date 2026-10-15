@@ -32,6 +32,7 @@ pub struct SourceChunk {
 /// Convert interleaved samples with any channel count and rate to [`RATE`]
 /// stereo. Mono is copied to both sides; extra channels are dropped.
 /// Linear interpolation is plenty for voice and system sound.
+#[cfg_attr(not(any(target_os = "macos", windows)), allow(dead_code))]
 pub fn to_stereo_48k(samples: &[f32], channels: usize, rate: u32) -> Vec<[f32; 2]> {
     let channels = channels.max(1);
     let frames: Vec<[f32; 2]> = samples

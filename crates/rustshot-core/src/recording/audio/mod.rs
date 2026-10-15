@@ -145,6 +145,7 @@ impl SourceControl {
         self.muted.store(muted, Ordering::Release);
     }
 
+    #[cfg(any(target_os = "macos", windows))]
     fn set_live(&self) {
         self.live.store(true, Ordering::Release);
     }
@@ -248,7 +249,9 @@ impl AudioCapture {
     }
 }
 
-/// Sends one source's audio, converted and placed on the timeline.
+/// Sends one source's audio, converted and placed on the timeline. (No
+/// sources exist on Linux yet.)
+#[cfg(any(target_os = "macos", windows))]
 pub(crate) struct SourceSender {
     started: Instant,
     clock: SourceClock,
@@ -256,6 +259,7 @@ pub(crate) struct SourceSender {
     control: Arc<SourceControl>,
 }
 
+#[cfg(any(target_os = "macos", windows))]
 impl SourceSender {
     pub(crate) fn new(started: Instant, out: Sender<SourceChunk>, control: &Arc<SourceControl>) -> Self {
         Self { started, clock: SourceClock::default(), out, control: control.clone() }

@@ -16,14 +16,14 @@ Released in 0.3.0: the redesigned Settings window, shortcut recorder, open at lo
 
 ## Phase 3: more destinations
 
-- Done (unreleased): open in another app (default or chosen), print, email, the macOS Share menu, and copy text (OCR with Vision, Windows OCR or Tesseract), from the quick menu, the after-capture settings and the editor.
-- Done (unreleased): a custom uploader (any server, ShareX `.sxcu` import).
+- Released in 0.5.0: open in another app (default or chosen), print, email, the macOS Share menu, and copy text (OCR with Vision, Windows OCR or Tesseract), from the quick menu, the after-capture settings and the editor.
+- Released in 0.5.0: a custom uploader (any server, ShareX `.sxcu` import).
 - Later: built-in uploaders for specific services, if there's demand.
 
 ## Video
 
 - Released in 0.4.0: region, window and display recording; MP4 on macOS, GIF everywhere; quality settings; disk-space safeguards.
-- Done (unreleased): MP4 on Windows (Media Foundation), the recording bar hidden from Windows recordings, microphone and system sound in MP4s, showing mouse clicks.
+- Released in 0.5.0: MP4 on Windows (Media Foundation), the recording bar hidden from Windows recordings, microphone and system sound in MP4s, showing mouse clicks.
 - Next: MP4 and sound on Linux (GStreamer, PipeWire), regions that span displays.
 
 ## Backlog

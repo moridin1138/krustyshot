@@ -36,10 +36,13 @@ Every pull request or change that users would notice adds a line under `## [Unre
    - With permission granted, region, window, full-screen and last-region capture work from both hotkeys and the tray menu, and show your real windows.
    - The overlay covers every display, including the menu bar, with nothing stretched.
    - A region on a Retina display produces the expected pixel size.
-   - Each destination works: editor, clipboard, save directly, save as.
+   - Each destination works from the quick menu: editor, clipboard, save directly, save as, open in another app (default and a chosen app), print (the dialog appears; cancel is fine), email (a new message with the attachment), Share, copy text (paste the result), and upload (with a test uploader; **Test upload** in Settings → Uploads).
    - Every editor tool, undo and redo, crop, save, and copy (paste into Preview to check).
-   - Settings: record a new shortcut and confirm it works straight away; toggle Open at login; Check for updates.
+   - The editor's send menu offers the same destinations, and ⌘P prints.
+   - Settings: record a new shortcut and confirm it works straight away; toggle Open at login; Check for updates. **About Rustshot** in the menu opens Settings → About, and its three buttons open the right GitHub pages.
    - Record a region, a window and a full display (MP4 and GIF); check Stop, Discard, the shortcut toggle, and that the recording bar isn't in the video. Play the files.
+   - Region and window recordings dim the rest of the display with a red outline; clicks pass through; neither appears in the video.
+   - Sound: turn the microphone on in Settings (macOS asks for access there), then record with the microphone, with system sound, and with both. Mute and unmute each from the bar icons. Check the sound is there, in sync, and silent while muted. With Show mouse clicks on, clicks appear in the video.
    - Open Mission Control on the desktop where Rustshot started: windows must look normal size, and no Rustshot window should appear.
    - Open and close the editor, Settings and notice windows several times, and cancel captures with Esc. Rustshot must not quit, and `~/Library/Logs/DiagnosticReports/` must have no new `rustshot-*.ips` file.
 3. **Choose the version** using the rules above.
@@ -58,7 +61,7 @@ Every pull request or change that users would notice adds a line under `## [Unre
    - `SHA256SUMS.txt`
 
    It attaches them to a **draft** GitHub release, using the changelog section as the notes.
-9. **Test the downloaded builds before publishing.** Download the macOS zip from the draft, unzip it, replace `/Applications/Rustshot.app`, open it from Finder, and repeat the permission, capture, recording and window open/close checks from step 2. If you can, also try the Windows zip (capture, editor, a GIF recording, Settings). Only then click Publish. If anything fails, delete the draft and the tag, fix it, and start again.
+9. **Test the downloaded builds before publishing.** Download the macOS zip from the draft, unzip it, replace `/Applications/Rustshot.app`, open it from Finder, and repeat the permission, capture, recording and window open/close checks from step 2. Also try the Windows zip on a real Windows machine, not over Remote Desktop (capture, editor, an MP4 and a GIF recording with sound, the destinations, Settings). Only then click Publish. If anything fails, delete the draft and the tag, fix it, and start again.
 
 ## If something goes wrong
 
