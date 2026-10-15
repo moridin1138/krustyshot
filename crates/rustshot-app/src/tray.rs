@@ -21,6 +21,7 @@ pub const OPEN_FOLDER: &str = "open_folder";
 pub const PREFERENCES: &str = "preferences";
 pub const ABOUT: &str = "about";
 pub const QUIT: &str = "quit";
+pub const UPDATE: &str = "update";
 
 pub struct Tray {
     _icon: TrayIcon,
@@ -32,9 +33,13 @@ fn item(id: &str, text: &str, hotkey: Option<&str>) -> MenuItem {
 }
 
 impl Tray {
-    /// `recording`: show "Stop recording" and a red icon.
-    pub fn new(config: &Config, recording: bool) -> anyhow::Result<Self> {
+    /// `recording`: show "Stop recording" and a red icon. `update`: a newer
+    /// version to offer at the top of the menu.
+    pub fn new(config: &Config, recording: bool, update: Option<&str>) -> anyhow::Result<Self> {
         let menu = Menu::new();
+        if let Some(version) = update {
+            menu.append_items(&[&item(UPDATE, &tr!("menu-update-available", version = version), None), &PredefinedMenuItem::separator()])?;
+        }
         let hk = &config.hotkeys;
         menu.append_items(&[
             &item(CAPTURE_REGION, &tr!("capture-region"), Some(&hk.region)),

@@ -1,6 +1,7 @@
 //! "Check for updates": compares this version with the latest GitHub release.
-//! Only runs when the user asks; it sends a plain request to GitHub's public
-//! API and nothing else.
+//! Runs when the user asks, and (if "Check for updates automatically" is on)
+//! shortly after start-up and once a day. It sends a plain request to
+//! GitHub's public API and nothing else.
 
 use anyhow::{Context, Result};
 

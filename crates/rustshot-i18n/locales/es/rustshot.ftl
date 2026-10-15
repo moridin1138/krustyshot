@@ -19,6 +19,7 @@ menu-open-clipboard = Abrir imagen del portapapeles
 menu-open-file = Abrir imagen…
 menu-open-folder = Abrir la carpeta de salida
 menu-quit = Salir de Rustshot
+menu-update-available = Actualización disponible: { $version }…
 menu-settings = Ajustes…
 tray-click-menu = Mostrar el menú
 
@@ -159,7 +160,9 @@ about-body =
 
     Con licencia PolyForm Shield 1.0.0: uso libre para cualquier fin, incluido el comercial, salvo ofrecer un producto que compita con Rustshot.
 about-credits = Inspirado en Greenshot. Iconos de Phosphor Icons.
-about-project-page = Página del proyecto
+about-view-github = Ver en GitHub
+about-report-problem = Informar de un problema
+about-release-notes = Notas de la versión
 about-reset-all = Restablecer todos los ajustes
 about-reset-all-tip = Devolver cada ajuste a su valor predeterminado
 about-settings-file = Archivo de ajustes
@@ -296,6 +299,8 @@ settings-magnifier = Lupa al seleccionar
 settings-menubar-icon = Icono de la barra de menús
 settings-notifications = Notificaciones
 settings-notifications-sub = Después de guardar o copiar
+settings-check-updates = Buscar actualizaciones automáticamente
+settings-check-updates-sub = Al iniciar y una vez al día; solo pide a GitHub el número de la última versión
 settings-off = No
 settings-open-at-login = Abrir al iniciar sesión
 settings-otherwise-always = Si no, siempre:
@@ -330,5 +335,7 @@ update-available = La versión { $version } está disponible.
 update-check = Buscar actualizaciones
 update-checking = Comprobando en GitHub…
 update-download = Descargar
+update-notice-title = Actualización de Rustshot disponible
+update-notice-body = Ya está disponible Rustshot { $version }. Tienes la { $current }.
 update-failed = No se pudieron buscar actualizaciones: { $error }
 update-latest = Tienes la última versión.

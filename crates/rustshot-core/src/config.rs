@@ -323,6 +323,11 @@ pub struct Config {
     /// The app "Open in another app" uses (`.app` on macOS, a program
     /// elsewhere); `None` for the system's default image app.
     pub external_app: Option<PathBuf>,
+    /// Check GitHub for a newer version at start-up and once a day.
+    pub check_for_updates: bool,
+    /// The newest version the user has been told about, so each one is
+    /// announced once.
+    pub announced_version: Option<String>,
 }
 
 impl Default for Config {
@@ -347,6 +352,8 @@ impl Default for Config {
             language: None,
             last_region: None,
             external_app: None,
+            check_for_updates: true,
+            announced_version: None,
         }
     }
 }

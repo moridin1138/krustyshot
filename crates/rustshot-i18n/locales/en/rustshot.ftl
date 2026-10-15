@@ -19,6 +19,7 @@ menu-open-clipboard = Open image from clipboard
 menu-open-file = Open image from file…
 menu-open-folder = Open output folder
 menu-quit = Quit Rustshot
+menu-update-available = Update available: { $version }…
 menu-settings = Settings…
 tray-click-menu = Show the menu
 
@@ -159,7 +160,9 @@ about-body =
 
     Licensed under the PolyForm Shield License 1.0.0: free for any use, including commercial, except providing a product that competes with Rustshot.
 about-credits = Inspired by Greenshot. Icons by Phosphor Icons.
-about-project-page = Project page
+about-view-github = View on GitHub
+about-report-problem = Report a problem
+about-release-notes = Release notes
 about-reset-all = Reset all settings
 about-reset-all-tip = Restore every setting to its default
 about-settings-file = Settings file
@@ -296,6 +299,8 @@ settings-magnifier = Magnifier while selecting
 settings-menubar-icon = Menu-bar icon
 settings-notifications = Notifications
 settings-notifications-sub = After saving or copying
+settings-check-updates = Check for updates automatically
+settings-check-updates-sub = At start-up and once a day; only asks GitHub for the latest version number
 settings-off = Off
 settings-open-at-login = Open at login
 settings-otherwise-always = Otherwise, always:
@@ -330,5 +335,7 @@ update-available = Version { $version } is available.
 update-check = Check for updates
 update-checking = Checking GitHub…
 update-download = Download
+update-notice-title = Rustshot update available
+update-notice-body = Rustshot { $version } is out. You have { $current }.
 update-failed = Couldn't check for updates: { $error }
 update-latest = You have the latest version.

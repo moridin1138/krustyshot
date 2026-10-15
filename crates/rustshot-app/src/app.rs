@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 use chrono::{DateTime, Local};
 use global_hotkey::{GlobalHotKeyEvent, HotKeyState};
 use rustshot_core::recording::{audio, CropRect, Recording, StopReason};
+use rustshot_core::update::{self, UpdateStatus};
 use rustshot_core::{capture, disk, output, permissions, share, Config, Destination, Region, RgbaImage, TrayClick};
 use rustshot_editor::{Editor, EditorRequest};
 use tray_icon::menu::MenuEvent;
@@ -70,6 +71,11 @@ struct Toast {
 }
 
 /// A finished capture waiting to be sent somewhere.
+/// How often the automatic update check runs, and how long after start-up
+/// the first one waits (so it never slows the start).
+const UPDATE_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
+const UPDATE_FIRST_DELAY: Duration = Duration::from_secs(30);
+
 #[derive(Clone)]
 struct Capture {
     image: RgbaImage,
@@ -90,6 +96,8 @@ struct Notice {
     title: String,
     body: String,
     permission: bool,
+    /// A button that opens a web page: (label, URL).
+    link: Option<(String, String)>,
     shown: bool,
 }
 
@@ -119,6 +127,11 @@ pub struct App {
     last_disk_warning: Option<Instant>,
     /// Text recognition running in the background.
     ocr_jobs: Vec<Receiver<anyhow::Result<String>>>,
+    /// The automatic update check: when it last ran, and its answer.
+    update_checked: Instant,
+    update_job: Option<Receiver<anyhow::Result<UpdateStatus>>>,
+    /// A newer version to offer in the menu: (version, page URL).
+    update: Option<(String, String)>,
 }
 
 impl App {
@@ -160,7 +173,7 @@ impl App {
 
         let config = Config::load();
         rustshot_i18n::set_language(config.language.as_deref());
-        let tray = Tray::new(&config, false).map_err(|e| log::error!("tray icon: {e}")).ok();
+        let tray = Tray::new(&config, false, None).map_err(|e| log::error!("tray icon: {e}")).ok();
         let mut hotkeys = HotkeyRegistry::new();
         let hotkey_errors = hotkeys.register(&config.hotkeys);
         for e in &hotkey_errors {
@@ -190,6 +203,10 @@ impl App {
             recording: None,
             last_disk_warning: None,
             ocr_jobs: Vec::new(),
+            // The first automatic check runs shortly after start-up.
+            update_checked: Instant::now().checked_sub(UPDATE_INTERVAL - UPDATE_FIRST_DELAY).unwrap_or_else(Instant::now),
+            update_job: None,
+            update: None,
         };
 
         // Let macOS show its own permission prompt once (this also adds Rustshot
@@ -218,6 +235,7 @@ impl App {
             title: title.into(),
             body: body.into(),
             permission,
+            link: None,
             shown: false,
         });
     }
@@ -471,7 +489,7 @@ impl App {
 
     fn rebuild_tray(&mut self) {
         self.tray = None;
-        self.tray = Tray::new(&self.config, self.recording.is_some()).map_err(|e| log::error!("tray icon: {e}")).ok();
+        self.tray = Tray::new(&self.config, self.recording.is_some(), self.update.as_ref().map(|(v, _)| v.as_str())).map_err(|e| log::error!("tray icon: {e}")).ok();
     }
 
     /// Explain how to grant Screen Recording access (shown at most once at a time).
@@ -563,6 +581,11 @@ impl App {
             }
             tray::ABOUT => self.notice(&tr!("menu-about"), &tr!("about-body", version = env!("CARGO_PKG_VERSION")), false),
             tray::QUIT => self.quit = true,
+            tray::UPDATE => {
+                if let Some((_, url)) = &self.update {
+                    ctx.open_url(egui::OpenUrl::new_tab(url));
+                }
+            }
             _ => {}
         }
         ctx.request_repaint();
@@ -726,6 +749,60 @@ impl App {
             Destination::Email => send::email(&path, &subject),
             Destination::Share => send::share(&path),
             _ => Ok(()),
+        }
+    }
+
+    /// The automatic update check: start one when due, and announce a new
+    /// version once (a notice, plus a menu item until it's installed).
+    fn check_for_updates(&mut self, ctx: &egui::Context) {
+        if let Some(rx) = &self.update_job {
+            match rx.try_recv() {
+                Ok(Ok(UpdateStatus::Available { version, url })) => {
+                    self.update_job = None;
+                    let new = self.update.as_ref().map(|(v, _)| v) != Some(&version);
+                    self.update = Some((version.clone(), url.clone()));
+                    if new {
+                        self.rebuild_tray();
+                    }
+                    if self.config.announced_version.as_ref() != Some(&version) {
+                        self.config.announced_version = Some(version.clone());
+                        if let Err(e) = self.config.save() {
+                            log::warn!("saving settings: {e:#}");
+                        }
+                        self.notice(&tr!("update-notice-title"), &tr!("update-notice-body", version = version, current = env!("CARGO_PKG_VERSION")), false);
+                        if let Some(n) = self.notices.last_mut() {
+                            n.link = Some((tr!("update-download"), url));
+                        }
+                    }
+                }
+                Ok(Ok(UpdateStatus::UpToDate { .. })) => self.update_job = None,
+                Ok(Err(e)) => {
+                    // Offline and the like: just try again next time.
+                    log::info!("automatic update check failed: {e:#}");
+                    self.update_job = None;
+                }
+                Err(std::sync::mpsc::TryRecvError::Empty) => {}
+                Err(std::sync::mpsc::TryRecvError::Disconnected) => self.update_job = None,
+            }
+            return;
+        }
+        if !self.config.check_for_updates {
+            return;
+        }
+        let due = self.update_checked + UPDATE_INTERVAL;
+        if Instant::now() < due {
+            ctx.request_repaint_after(due - Instant::now());
+            return;
+        }
+        self.update_checked = Instant::now();
+        let (tx, rx) = channel();
+        let ctx = ctx.clone();
+        let started = std::thread::Builder::new().name("rustshot-update".into()).spawn(move || {
+            let _ = tx.send(update::check(env!("CARGO_PKG_VERSION")));
+            ctx.request_repaint();
+        });
+        if started.is_ok() {
+            self.update_job = Some(rx);
         }
     }
 
@@ -950,7 +1027,7 @@ impl App {
             if tray_changed {
                 // Rebuild the tray so menu shortcuts and click behaviour match.
                 self.tray = None;
-                self.tray = Tray::new(&self.config, self.recording.is_some()).map_err(|e| log::error!("tray icon: {e}")).ok();
+                self.tray = Tray::new(&self.config, self.recording.is_some(), self.update.as_ref().map(|(v, _)| v.as_str())).map_err(|e| log::error!("tray icon: {e}")).ok();
             }
         }
         // Pause global hotkeys while a new shortcut is being recorded, so
@@ -1004,6 +1081,12 @@ impl App {
                             if ui.button(tr!("menu-quit")).clicked() {
                                 quit = true;
                             }
+                        }
+                        if let Some((label, url)) = &n.link
+                            && ui.button(label).clicked()
+                        {
+                            ui.ctx().open_url(egui::OpenUrl::new_tab(url));
+                            close = true;
                         }
                         if ui.button(if n.permission { tr!("button-close") } else { tr!("button-ok") }).clicked() {
                             close = true;
@@ -1102,6 +1185,7 @@ impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.handle_events(ctx);
         self.poll_ocr(ctx);
+        self.check_for_updates(ctx);
         self.stress_step(ctx);
         if self.quit {
             // Never lose a recording by quitting: finish and save it first.

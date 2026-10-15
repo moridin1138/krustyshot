@@ -13,6 +13,9 @@ use rustshot_core::{autostart, disk, recording, Config, Destination, OutputForma
 use crate::{hotkeys, platform};
 use rustshot_i18n::tr;
 
+/// The project on GitHub.
+const REPO_URL: &str = "https://github.com/moridin1138/rustshot";
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Section {
     General,
@@ -367,6 +370,10 @@ impl SettingsWindow {
             if let Some(e) = &self.autostart_error {
                 ui.colored_label(ui.visuals().error_fg_color, e);
             }
+            divider(ui);
+            row(ui, &tr!("settings-check-updates"), Some(&tr!("settings-check-updates-sub")), |ui| {
+                toggle(ui, &mut d.check_for_updates);
+            });
         });
     }
 
@@ -484,12 +491,19 @@ impl SettingsWindow {
                     ui.colored_label(ui.visuals().warn_fg_color, tr!("update-failed", error = e));
                 }
             }
-            divider(ui);
-            row(ui, &tr!("about-project-page"), None, |ui| {
-                if ui.link("github.com/moridin1138/rustshot").clicked() {
-                    ui.ctx().open_url(egui::OpenUrl::new_tab("https://github.com/moridin1138/rustshot"));
+            ui.add_space(4.0);
+            ui.horizontal(|ui| {
+                if ui.button(format!("{}  {}", icon::GITHUB_LOGO, tr!("about-view-github"))).clicked() {
+                    ui.ctx().open_url(egui::OpenUrl::new_tab(REPO_URL));
+                }
+                if ui.button(format!("{}  {}", icon::NOTE, tr!("about-release-notes"))).clicked() {
+                    ui.ctx().open_url(egui::OpenUrl::new_tab(update::RELEASES_URL));
+                }
+                if ui.button(format!("{}  {}", icon::BUG, tr!("about-report-problem"))).clicked() {
+                    ui.ctx().open_url(egui::OpenUrl::new_tab(format!("{REPO_URL}/issues")));
                 }
             });
+            ui.add_space(4.0);
             divider(ui);
             row(ui, &tr!("about-settings-file"), None, |ui| {
                 if let Some(path) = Config::path()
