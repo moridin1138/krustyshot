@@ -6,6 +6,7 @@
 //! day later, on the next start.
 
 pub mod ocr;
+pub mod upload;
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};

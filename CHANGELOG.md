@@ -14,8 +14,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - While recording a region or a window, the rest of the display is dimmed and a thin red line marks the recorded area. Clicks go straight through, and none of it appears in the recording.
 - The recording bar keeps every item in a fixed place, so the timer, size and icons don't shift as they change.
 - New destinations, in the quick menu, the after-capture settings and the editor's new send menu: **Open in another app** (the default image app, or one chosen in Settings), **Print** (⌘P / Ctrl+P in the editor), **Email** (a new message with the image attached), **Share** on macOS (AirDrop, Messages, Notes and more) and **Copy text**, which recognises the text in the image (Vision on macOS, Windows' built-in OCR, Tesseract on Linux) and copies it.
+- **Custom uploader** (Settings → Uploads): send captures to your own server or an image host and copy the link it returns. Set the address, POST or PUT, a form field or the raw file, headers (such as an API key), extra form fields, and where the link is in the reply (`$json:data.link$`). ShareX uploader files (`.sxcu`) can be imported, and **Test upload** checks the settings. Once set up, "Upload to …" appears in the quick menu, the after-capture settings and the editor.
 - Automatic update check (Settings → General, on by default): shortly after start-up and once a day Rustshot asks GitHub for the latest version number. A new version is announced once with a Download button, and the menu-bar menu offers it until you update.
-- Settings → About has **View on GitHub**, **Release notes** and **Report a problem** buttons right under the version.
+- Settings → About has **View on GitHub**, **Release notes** and **Report a problem** buttons right under the version. **About Rustshot** in the menu-bar menu now opens this page instead of a separate window.
 - **Show mouse clicks** (Settings → Recording): a dot while the button is held and a fading ring where you click.
 
 ### Changed

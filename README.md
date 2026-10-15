@@ -12,7 +12,7 @@ A cross-platform screenshot tool modelled on [Greenshot](https://getgreenshot.or
 - Window capture: hover to highlight, click to capture (Space switches between region and window mode, like Greenshot)
 - Regions that span several displays, and full-screen capture of all displays
 - Capture last region, capture delay, and optionally the mouse pointer
-- Destination picker after each capture: open in editor, copy, save directly, save as, open in another app, print, email, Share (macOS), and copy the text in the image (OCR)
+- Destination picker after each capture: open in editor, copy, save directly, save as, open in another app, print, email, Share (macOS), copy the text in the image (OCR), and upload to your own server or image host (ShareX `.sxcu` uploaders can be imported)
 - Image editor with Phosphor icons: select, move and resize, rectangle, ellipse, line, arrow, freehand, text, speech bubble, step counter, highlight (marker, spotlight, grey out the rest, magnify), obfuscate (pixelate or blur), crop, drop shadows, undo and redo
 - Effects: drop shadow, torn edges, border, greyscale, invert, rotate, resize
 - Screen recording of a region, a window or a whole display, to MP4 (macOS and Windows) or GIF (all platforms), with quality, resolution and frame-rate settings and a size estimate; MP4s can include the microphone and system sound, and clicks can be shown

@@ -117,6 +117,7 @@ Clipboard and file destinations live in `output.rs`. The others hand the image t
 - **Print:** an `NSPrintOperation` fitted to the page on macOS; Windows' Print Pictures window (`ShellExecute` "print"); `lp` on Linux.
 - **Email:** the Mail compose sharing service on macOS; Simple MAPI (`MAPISendMailW`, loaded from `mapi32.dll`) on Windows; `xdg-email` on Linux.
 - **Share (macOS):** `NSSharingServicePicker` next to the pointer in the active window.
+- **Upload (`share/upload.rs`):** the custom uploader, modelled on ShareX's so `.sxcu` files import directly. It sends a multipart form (built by hand) or the raw file with `ureq`, then fills the link template (`$json:path$`, `$response$`, or the older `{json:path}`) from the reply. Runs on a background thread; the app copies the link.
 - **Copy text (`share/ocr.rs`):** Vision (`VNRecognizeTextRequest`, accurate, app language first) on macOS, `Windows.Media.Ocr` on Windows, the `tesseract` command on Linux. It runs on a background thread; the app copies the result when it arrives.
 
 ## Recording (`rustshot-core::recording`)

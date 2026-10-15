@@ -125,8 +125,9 @@ pub struct App {
     /// When the low-disk warning was last shown for screenshots (it is
     /// shown at most every 30 minutes for those; always for recordings).
     last_disk_warning: Option<Instant>,
-    /// Text recognition running in the background.
-    ocr_jobs: Vec<Receiver<anyhow::Result<String>>>,
+    /// Text recognition and uploads running in the background; each
+    /// produces text to copy (the text found, or the link).
+    jobs: Vec<(Destination, Receiver<anyhow::Result<String>>)>,
     /// The automatic update check: when it last ran, and its answer.
     update_checked: Instant,
     update_job: Option<Receiver<anyhow::Result<UpdateStatus>>>,
@@ -202,7 +203,7 @@ impl App {
             overlay_purpose: Purpose::Screenshot,
             recording: None,
             last_disk_warning: None,
-            ocr_jobs: Vec::new(),
+            jobs: Vec::new(),
             // The first automatic check runs shortly after start-up.
             update_checked: Instant::now().checked_sub(UPDATE_INTERVAL - UPDATE_FIRST_DELAY).unwrap_or_else(Instant::now),
             update_job: None,
@@ -579,7 +580,11 @@ impl App {
                 }
                 platform::activate_app();
             }
-            tray::ABOUT => self.notice(&tr!("menu-about"), &tr!("about-body", version = env!("CARGO_PKG_VERSION")), false),
+            tray::ABOUT => {
+                // Settings, open at About (version, update check, links).
+                self.settings.get_or_insert_with(SettingsWindow::new).show_about();
+                platform::activate_app();
+            }
             tray::QUIT => self.quit = true,
             tray::UPDATE => {
                 if let Some((_, url)) = &self.update {
@@ -693,6 +698,9 @@ impl App {
             self.picker = Some((cap, true));
             return;
         }
+        // Skip any the platform lacks or that are no longer set up (an
+        // uploader that was removed).
+        let dests: Vec<Destination> = dests.into_iter().filter(|d| dest_available(*d, &self.config)).collect();
         for d in dests {
             self.send_to(d, &cap);
         }
@@ -719,13 +727,19 @@ impl App {
                 Some(path) => output::save_to(&cap.image, &path, &self.config).map(|_| self.notify_saved(path)),
                 None => Ok(()),
             },
-            Destination::OpenWith | Destination::Print | Destination::Email | Destination::Share | Destination::CopyText => {
+            Destination::OpenWith
+            | Destination::Print
+            | Destination::Email
+            | Destination::Share
+            | Destination::CopyText
+            | Destination::Upload => {
                 self.send_image(dest, &cap.image, &cap.title, cap.taken_at)
             }
         };
         if let Err(e) = result {
-            log::error!("{}: {e:#}", dest.label());
-            self.notice(&dest.label(), &format!("{e:#}"), false);
+            let label = dest_label(dest, &self.config);
+            log::error!("{label}: {e:#}");
+            self.notice(&label, &format!("{e:#}"), false);
         }
     }
 
@@ -733,15 +747,18 @@ impl App {
     /// app, the printer, email, the Share menu, text recognition.
     fn send_image(&mut self, dest: Destination, image: &RgbaImage, title: &str, taken_at: DateTime<Local>) -> anyhow::Result<()> {
         if dest == Destination::CopyText {
-            let (tx, rx) = channel();
             let image = image.clone();
-            std::thread::Builder::new().name("rustshot-ocr".into()).spawn(move || {
-                let _ = tx.send(share::ocr::recognize(&image));
-            })?;
-            self.ocr_jobs.push(rx);
-            return Ok(());
+            return self.spawn_job(dest, move || share::ocr::recognize(&image));
         }
         let path = share::temp_copy(image, &self.config, title, taken_at)?;
+        if dest == Destination::Upload {
+            let uploader = self.config.uploader.clone();
+            return self.spawn_job(dest, move || {
+                let bytes = std::fs::read(&path)?;
+                let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| "screenshot.png".into());
+                uploader.upload(&bytes, &name, "image/png")
+            });
+        }
         let subject = if title.trim().is_empty() { tr!("title-screenshot") } else { title.to_string() };
         match dest {
             Destination::OpenWith => share::open_with(&path, self.config.external_app.as_deref()),
@@ -806,34 +823,47 @@ impl App {
         }
     }
 
-    /// Copy recognised text once it's ready.
-    fn poll_ocr(&mut self, ctx: &egui::Context) {
-        if self.ocr_jobs.is_empty() {
+    /// Run `work` on a background thread; its text is copied when it's done.
+    fn spawn_job(&mut self, dest: Destination, work: impl FnOnce() -> anyhow::Result<String> + Send + 'static) -> anyhow::Result<()> {
+        let (tx, rx) = channel();
+        std::thread::Builder::new().name("rustshot-job".into()).spawn(move || {
+            let _ = tx.send(work());
+        })?;
+        self.jobs.push((dest, rx));
+        Ok(())
+    }
+
+    /// Copy what finished background jobs produced: recognised text, or an
+    /// upload's link.
+    fn poll_jobs(&mut self, ctx: &egui::Context) {
+        if self.jobs.is_empty() {
             return;
         }
         let mut finished = Vec::new();
-        self.ocr_jobs.retain(|rx| match rx.try_recv() {
+        self.jobs.retain(|(dest, rx)| match rx.try_recv() {
             Ok(result) => {
-                finished.push(result);
+                finished.push((*dest, result));
                 false
             }
             Err(std::sync::mpsc::TryRecvError::Empty) => true,
             Err(std::sync::mpsc::TryRecvError::Disconnected) => false,
         });
-        for result in finished {
+        for (dest, result) in finished {
+            let title = dest_label(dest, &self.config);
             match result {
                 Ok(text) if text.trim().is_empty() => self.notify(&tr!("toast-no-text"), None),
                 Ok(text) => match output::copy_text_to_clipboard(&text) {
+                    Ok(()) if dest == Destination::Upload => self.notify(&tr!("toast-uploaded", link = text), None),
                     Ok(()) => self.notify(&tr!("toast-text-copied", lines = text.lines().count()), None),
-                    Err(e) => self.notice(&tr!("dest-copy-text"), &format!("{e:#}"), false),
+                    Err(e) => self.notice(&title, &format!("{e:#}"), false),
                 },
                 Err(e) => {
-                    log::error!("text recognition: {e:#}");
-                    self.notice(&tr!("dest-copy-text"), &format!("{e:#}"), false);
+                    log::error!("{title}: {e:#}");
+                    self.notice(&title, &format!("{e:#}"), false);
                 }
             }
         }
-        if !self.ocr_jobs.is_empty() {
+        if !self.jobs.is_empty() {
             ctx.request_repaint_after(Duration::from_millis(100));
         }
     }
@@ -873,11 +903,13 @@ impl App {
     }
 
     fn show_picker(&mut self, ctx: &egui::Context) {
+        let choices: Vec<(Destination, String)> =
+            picker_choices(&self.config).into_iter().map(|d| (d, format!("{}  {}", dest_icon(d), dest_label(d, &self.config)))).collect();
         let Some((cap, first_frame)) = &mut self.picker else { return };
         let id = egui::ViewportId::from_hash_of("rustshot-picker");
         let builder = egui::ViewportBuilder::default()
             .with_title("Rustshot")
-            .with_inner_size([300.0, 30.0 * picker_choices().len() as f32 + 92.0])
+            .with_inner_size([300.0, 30.0 * choices.len() as f32 + 92.0])
             .with_resizable(false)
             .with_window_level(egui::WindowLevel::AlwaysOnTop);
         let (w, h) = cap.image.dimensions();
@@ -892,9 +924,9 @@ impl App {
                 // Full-width buttons, labels on the left like a menu.
                 ui.with_layout(egui::Layout::top_down_justified(egui::Align::Min), |ui| {
                     let full = |ui: &mut egui::Ui, text: String| ui.add(egui::Button::new(text).min_size(egui::vec2(0.0, 26.0))).clicked();
-                    for dest in picker_choices() {
-                        if full(ui, format!("{}  {}", dest_icon(dest), dest.label())) {
-                            choice = Some(Some(dest));
+                    for (dest, label) in &choices {
+                        if full(ui, label.clone()) {
+                            choice = Some(Some(*dest));
                         }
                     }
                     ui.add_space(4.0);
@@ -924,7 +956,9 @@ impl App {
         let mut errors = Vec::new();
         let mut toasts: Vec<(String, Option<PathBuf>)> = Vec::new();
         let mut sends = Vec::new();
+        let upload_label = dest_available(Destination::Upload, config).then(|| dest_label(Destination::Upload, config));
         for (idx, ew) in self.editors.iter_mut().enumerate() {
+            ew.editor.upload_label = upload_label.clone();
             let (w, h) = ew.editor.image_size();
             let ppp = ctx.pixels_per_point().max(1.0);
             let size = [
@@ -965,12 +999,18 @@ impl App {
                         close = true;
                         Ok(())
                     }
-                    EditorRequest::OpenWith | EditorRequest::Print | EditorRequest::Email | EditorRequest::Share | EditorRequest::CopyText => {
+                    EditorRequest::OpenWith
+                    | EditorRequest::Print
+                    | EditorRequest::Email
+                    | EditorRequest::Share
+                    | EditorRequest::CopyText
+                    | EditorRequest::Upload => {
                         let dest = match req {
                             EditorRequest::OpenWith => Destination::OpenWith,
                             EditorRequest::Print => Destination::Print,
                             EditorRequest::Email => Destination::Email,
                             EditorRequest::Share => Destination::Share,
+                            EditorRequest::Upload => Destination::Upload,
                             _ => Destination::CopyText,
                         };
                         sends.push((dest, ew.editor.flatten(), ew.editor.title.clone(), ew.taken_at));
@@ -1001,8 +1041,9 @@ impl App {
         }
         for (dest, image, title, taken_at) in sends {
             if let Err(e) = self.send_image(dest, &image, &title, taken_at) {
-                log::error!("{}: {e:#}", dest.label());
-                self.notice(&dest.label(), &format!("{e:#}"), false);
+                let label = dest_label(dest, &self.config);
+                log::error!("{label}: {e:#}");
+                self.notice(&label, &format!("{e:#}"), false);
             }
         }
     }
@@ -1184,7 +1225,7 @@ fn confirm_close(config: &Config, ew: &mut EditorWindow) -> bool {
 impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.handle_events(ctx);
-        self.poll_ocr(ctx);
+        self.poll_jobs(ctx);
         self.check_for_updates(ctx);
         self.stress_step(ctx);
         if self.quit {
@@ -1215,9 +1256,22 @@ impl eframe::App for App {
     }
 }
 
-/// Every destination the quick menu offers on this platform.
-fn picker_choices() -> Vec<Destination> {
-    Destination::ALL.into_iter().filter(|d| *d != Destination::Picker && d.available()).collect()
+/// Every destination the quick menu offers: those this platform has, and
+/// the uploader once it's set up.
+pub fn picker_choices(config: &Config) -> Vec<Destination> {
+    Destination::ALL.into_iter().filter(|d| *d != Destination::Picker && dest_available(*d, config)).collect()
+}
+
+pub fn dest_available(dest: Destination, config: &Config) -> bool {
+    dest.available() && (dest != Destination::Upload || config.uploader.is_ready())
+}
+
+/// A destination's name, with the uploader's name filled in.
+pub fn dest_label(dest: Destination, config: &Config) -> String {
+    match dest {
+        Destination::Upload => tr!("dest-upload-to", name = config.uploader.name.trim()),
+        other => other.label(),
+    }
 }
 
 pub fn dest_icon(dest: Destination) -> &'static str {
@@ -1233,5 +1287,6 @@ pub fn dest_icon(dest: Destination) -> &'static str {
         Destination::Email => icon::ENVELOPE_SIMPLE,
         Destination::Share => icon::SHARE_NETWORK,
         Destination::CopyText => icon::TEXT_T,
+        Destination::Upload => icon::CLOUD_ARROW_UP,
     }
 }

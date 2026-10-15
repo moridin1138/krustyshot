@@ -153,12 +153,6 @@ permission-title = Se necesita el permiso de Grabación de pantalla
 
 ## About
 
-about-body =
-    Rustshot { $version }
-
-    Una herramienta de capturas de pantalla multiplataforma inspirada en Greenshot, escrita en Rust con egui.
-
-    Con licencia PolyForm Shield 1.0.0: uso libre para cualquier fin, incluido el comercial, salvo ofrecer un producto que compita con Rustshot.
 about-credits = Inspirado en Greenshot. Iconos de Phosphor Icons.
 about-view-github = Ver en GitHub
 about-report-problem = Informar de un problema
@@ -339,3 +333,29 @@ update-notice-title = Actualización de Rustshot disponible
 update-notice-body = Ya está disponible Rustshot { $version }. Tienes la { $current }.
 update-failed = No se pudieron buscar actualizaciones: { $error }
 update-latest = Tienes la última versión.
+
+## Uploads
+dest-upload = Subir
+dest-upload-to = Subir a { $name }
+toast-uploaded = Subido; enlace copiado: { $link }
+settings-uploads = Subidas
+upload-intro = Envía capturas a tu propio servidor o a un alojamiento de imágenes y copia el enlace que devuelve. No se sube nada hasta que lo configures y elijas «Subir».
+upload-import = Importar subida de ShareX (.sxcu)…
+upload-clear = Quitar la subida
+upload-name = Nombre
+upload-name-sub = Se muestra en los menús como «Subir a …»
+upload-url = Dirección de subida
+upload-method = Método
+upload-body = Enviar la imagen como
+upload-body-form = Campo de formulario
+upload-body-binary = Solo el archivo
+upload-file-field = Nombre del campo
+upload-link = Enlace en la respuesta
+upload-link-sub = p. ej. $json:data.link$; déjalo vacío si la respuesta es el enlace
+upload-headers = Cabeceras (por ejemplo, una clave de API)
+upload-form = Campos de formulario adicionales
+upload-secrets-note = Los valores de las cabeceras, como las claves de API, se guardan en el archivo de ajustes de Rustshot en este ordenador.
+upload-test = Probar la subida
+upload-not-ready = Añade un nombre y una dirección que empiece por https:// para usar la subida.
+upload-remove = Quitar
+upload-add = Añadir

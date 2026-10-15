@@ -153,12 +153,6 @@ permission-title = Screen Recording permission needed
 
 ## About
 
-about-body =
-    Rustshot { $version }
-
-    A cross-platform screenshot tool inspired by Greenshot, written in Rust with egui.
-
-    Licensed under the PolyForm Shield License 1.0.0: free for any use, including commercial, except providing a product that competes with Rustshot.
 about-credits = Inspired by Greenshot. Icons by Phosphor Icons.
 about-view-github = View on GitHub
 about-report-problem = Report a problem
@@ -339,3 +333,29 @@ update-notice-title = Rustshot update available
 update-notice-body = Rustshot { $version } is out. You have { $current }.
 update-failed = Couldn't check for updates: { $error }
 update-latest = You have the latest version.
+
+## Uploads
+dest-upload = Upload
+dest-upload-to = Upload to { $name }
+toast-uploaded = Uploaded; link copied: { $link }
+settings-uploads = Uploads
+upload-intro = Send captures to your own server or an image host, and copy the link it returns. Nothing is uploaded until you set this up and choose "Upload".
+upload-import = Import ShareX uploader (.sxcu)…
+upload-clear = Remove uploader
+upload-name = Name
+upload-name-sub = Shown in menus as "Upload to …"
+upload-url = Upload address
+upload-method = Method
+upload-body = Send the image as
+upload-body-form = Form field
+upload-body-binary = File only
+upload-file-field = Form field name
+upload-link = Link in the reply
+upload-link-sub = e.g. $json:data.link$; leave empty if the reply is the link
+upload-headers = Headers (for example an API key)
+upload-form = Extra form fields
+upload-secrets-note = Header values, such as API keys, are saved in Rustshot's settings file on this computer.
+upload-test = Test upload
+upload-not-ready = Add a name and an address starting with https:// to use the uploader.
+upload-remove = Remove
+upload-add = Add

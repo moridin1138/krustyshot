@@ -153,12 +153,6 @@ permission-title = Berechtigung „Bildschirmaufnahme“ erforderlich
 
 ## About
 
-about-body =
-    Rustshot { $version }
-
-    Ein plattformübergreifendes Bildschirmfoto-Werkzeug nach dem Vorbild von Greenshot, geschrieben in Rust mit egui.
-
-    Lizenziert unter der PolyForm Shield License 1.0.0: frei für jeden Zweck, auch kommerziell, außer für ein Produkt, das mit Rustshot konkurriert.
 about-credits = Inspiriert von Greenshot. Symbole von Phosphor Icons.
 about-view-github = Auf GitHub ansehen
 about-report-problem = Problem melden
@@ -339,3 +333,29 @@ update-notice-title = Rustshot-Update verfügbar
 update-notice-body = Rustshot { $version } ist erschienen. Du hast { $current }.
 update-failed = Nach Updates suchen fehlgeschlagen: { $error }
 update-latest = Du hast die neueste Version.
+
+## Uploads
+dest-upload = Hochladen
+dest-upload-to = Hochladen zu { $name }
+toast-uploaded = Hochgeladen; Link kopiert: { $link }
+settings-uploads = Uploads
+upload-intro = Sende Aufnahmen an deinen eigenen Server oder einen Bildhoster und kopiere den zurückgegebenen Link. Nichts wird hochgeladen, bis du das einrichtest und „Hochladen“ wählst.
+upload-import = ShareX-Uploader importieren (.sxcu)…
+upload-clear = Uploader entfernen
+upload-name = Name
+upload-name-sub = In Menüs als „Hochladen zu …“ angezeigt
+upload-url = Upload-Adresse
+upload-method = Methode
+upload-body = Bild senden als
+upload-body-form = Formularfeld
+upload-body-binary = Nur die Datei
+upload-file-field = Name des Formularfelds
+upload-link = Link in der Antwort
+upload-link-sub = z. B. $json:data.link$; leer lassen, wenn die Antwort der Link ist
+upload-headers = Header (zum Beispiel ein API-Schlüssel)
+upload-form = Zusätzliche Formularfelder
+upload-secrets-note = Header-Werte wie API-Schlüssel werden in der Einstellungsdatei von Rustshot auf diesem Computer gespeichert.
+upload-test = Upload testen
+upload-not-ready = Gib einen Namen und eine Adresse mit https:// an, um den Uploader zu nutzen.
+upload-remove = Entfernen
+upload-add = Hinzufügen

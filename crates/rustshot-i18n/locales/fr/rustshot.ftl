@@ -153,12 +153,6 @@ permission-title = Autorisation d'enregistrement de l'écran requise
 
 ## About
 
-about-body =
-    Rustshot { $version }
-
-    Un outil de capture d'écran multiplateforme inspiré de Greenshot, écrit en Rust avec egui.
-
-    Sous licence PolyForm Shield 1.0.0 : utilisation libre à toutes fins, y compris commerciales, sauf pour fournir un produit concurrent de Rustshot.
 about-credits = Inspiré de Greenshot. Icônes de Phosphor Icons.
 about-view-github = Voir sur GitHub
 about-report-problem = Signaler un problème
@@ -339,3 +333,29 @@ update-notice-title = Mise à jour de Rustshot disponible
 update-notice-body = Rustshot { $version } est disponible. Vous avez la version { $current }.
 update-failed = Impossible de vérifier les mises à jour : { $error }
 update-latest = Vous avez la dernière version.
+
+## Uploads
+dest-upload = Envoyer en ligne
+dest-upload-to = Envoyer vers { $name }
+toast-uploaded = Envoyé ; lien copié : { $link }
+settings-uploads = Envois
+upload-intro = Envoyez vos captures vers votre propre serveur ou un hébergeur d'images, et copiez le lien renvoyé. Rien n'est envoyé tant que vous n'avez pas configuré ceci et choisi « Envoyer ».
+upload-import = Importer un envoi ShareX (.sxcu)…
+upload-clear = Supprimer l'envoi
+upload-name = Nom
+upload-name-sub = Affiché dans les menus : « Envoyer vers … »
+upload-url = Adresse d'envoi
+upload-method = Méthode
+upload-body = Envoyer l'image comme
+upload-body-form = Champ de formulaire
+upload-body-binary = Fichier seul
+upload-file-field = Nom du champ
+upload-link = Lien dans la réponse
+upload-link-sub = p. ex. $json:data.link$ ; laissez vide si la réponse est le lien
+upload-headers = En-têtes (par exemple une clé d'API)
+upload-form = Champs de formulaire supplémentaires
+upload-secrets-note = Les valeurs des en-têtes, comme les clés d'API, sont enregistrées dans le fichier de réglages de Rustshot sur cet ordinateur.
+upload-test = Tester l'envoi
+upload-not-ready = Indiquez un nom et une adresse commençant par https:// pour utiliser l'envoi.
+upload-remove = Supprimer
+upload-add = Ajouter

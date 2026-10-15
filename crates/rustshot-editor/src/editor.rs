@@ -27,6 +27,8 @@ pub enum EditorRequest {
     Share,
     /// Recognise and copy the text.
     CopyText,
+    /// Send to the custom uploader (only offered when `Editor::upload_label` is set).
+    Upload,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -185,6 +187,8 @@ pub struct Editor {
     resize_percent: f32,
     /// Offer the system Share menu (set by the app where there is one).
     pub can_share: bool,
+    /// "Upload to …", when the app has an uploader set up.
+    pub upload_label: Option<String>,
 }
 
 impl Editor {
@@ -211,6 +215,7 @@ impl Editor {
             border_color: Color32::WHITE,
             resize_percent: 50.0,
             can_share: false,
+            upload_label: None,
         }
     }
 
@@ -511,6 +516,9 @@ impl Editor {
                 item(ui, icon::ENVELOPE_SIMPLE, tr!("dest-email"), EditorRequest::Email);
                 if self.can_share {
                     item(ui, icon::SHARE_NETWORK, tr!("dest-share"), EditorRequest::Share);
+                }
+                if let Some(label) = self.upload_label.clone() {
+                    item(ui, icon::CLOUD_ARROW_UP, label, EditorRequest::Upload);
                 }
                 ui.separator();
                 item(ui, icon::TEXT_T, tr!("dest-copy-text"), EditorRequest::CopyText);

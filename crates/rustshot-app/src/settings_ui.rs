@@ -7,6 +7,7 @@ use egui_phosphor::regular as icon;
 use rustshot_core::config::{Hotkeys, RecordingSettings};
 use rustshot_core::recording::audio::{self, Microphone, MicrophoneAccess};
 use rustshot_core::filename::{self, PatternContext};
+use rustshot_core::share::upload::{UploadBody, UploadMethod, Uploader};
 use rustshot_core::update::{self, UpdateStatus};
 use rustshot_core::{autostart, disk, recording, Config, Destination, OutputFormat, TrayClick, VideoFormat, VideoQuality};
 
@@ -23,12 +24,20 @@ enum Section {
     Recording,
     Shortcuts,
     Saving,
+    Uploads,
     About,
 }
 
 impl Section {
-    const ALL: [Section; 6] =
-        [Section::General, Section::Capture, Section::Recording, Section::Shortcuts, Section::Saving, Section::About];
+    const ALL: [Section; 7] = [
+        Section::General,
+        Section::Capture,
+        Section::Recording,
+        Section::Shortcuts,
+        Section::Saving,
+        Section::Uploads,
+        Section::About,
+    ];
 
     fn label(self) -> String {
         match self {
@@ -37,6 +46,7 @@ impl Section {
             Section::Recording => tr!("settings-recording"),
             Section::Shortcuts => tr!("settings-shortcuts"),
             Section::Saving => tr!("settings-saving"),
+            Section::Uploads => tr!("settings-uploads"),
             Section::About => tr!("settings-about"),
         }
     }
@@ -49,6 +59,7 @@ impl Section {
             Section::Recording => "recording",
             Section::Shortcuts => "shortcuts",
             Section::Saving => "saving",
+            Section::Uploads => "uploads",
             Section::About => "about",
         }
     }
@@ -60,6 +71,7 @@ impl Section {
             Section::Recording => icon::VIDEO_CAMERA,
             Section::Shortcuts => icon::KEYBOARD,
             Section::Saving => icon::FOLDER,
+            Section::Uploads => icon::CLOUD_ARROW_UP,
             Section::About => icon::INFO,
         }
     }
@@ -129,6 +141,9 @@ pub struct SettingsWindow {
     display: Option<(u32, u32, f64)>,
     /// Connected microphones, listed when first needed.
     microphones: Option<Vec<Microphone>>,
+    /// The uploader's Test button, and a failed ShareX import.
+    upload_test: Arc<Mutex<UploadTest>>,
+    import_error: Option<String>,
     /// Debug builds: RUSTSHOT_SETTINGS_TOUR=<dir> saves a picture of each
     /// section (just this window), for reviewing the design.
     tour: Option<Tour>,
@@ -155,11 +170,19 @@ impl SettingsWindow {
             update: Arc::default(),
             display: rustshot_core::capture::primary_display_pixels(),
             microphones: None,
+            upload_test: Arc::default(),
+            import_error: None,
             tour: cfg!(debug_assertions)
                 .then(|| std::env::var_os("RUSTSHOT_SETTINGS_TOUR"))
                 .flatten()
                 .map(|dir| Tour { dir: dir.into(), index: 0, frames: 0 }),
         }
+    }
+
+    /// Switch to the About section and bring the window forward.
+    pub fn show_about(&mut self) {
+        self.section = Section::About;
+        self.focus = true;
     }
 
     /// Step through the sections, photographing just this window for each
@@ -226,6 +249,7 @@ impl SettingsWindow {
                             Section::Recording => recording(ui, &mut draft, self.display, &mut self.microphones),
                             Section::Shortcuts => self.shortcuts(ui, &mut draft, hotkey_errors),
                             Section::Saving => saving(ui, &mut draft),
+                            Section::Uploads => self.uploads(ui, &mut draft),
                             Section::About => self.about(ui, &mut draft),
                         }
                     });
@@ -292,8 +316,14 @@ impl SettingsWindow {
                         Destination::File => tr!("settings-dest-folder"),
                         other => other.label(),
                     };
-                    let choices = Destination::ALL.into_iter().filter(|d| *d != Destination::Picker && d.available());
-                    for (dest, label) in choices.map(|d| (d, format!("{}  {}", crate::app::dest_icon(d), short(d)))) {
+                    let choices: Vec<(Destination, String)> = crate::app::picker_choices(d)
+                        .into_iter()
+                        .map(|dest| {
+                            let text = if dest == Destination::Upload { crate::app::dest_label(dest, d) } else { short(dest) };
+                            (dest, format!("{}  {}", crate::app::dest_icon(dest), text))
+                        })
+                        .collect();
+                    for (dest, label) in choices {
                         let on = d.destinations.contains(&dest);
                         if ui.add(egui::Button::selectable(on, label)).clicked() {
                             if on {
@@ -374,6 +404,113 @@ impl SettingsWindow {
             row(ui, &tr!("settings-check-updates"), Some(&tr!("settings-check-updates-sub")), |ui| {
                 toggle(ui, &mut d.check_for_updates);
             });
+        });
+    }
+
+    fn uploads(&mut self, ui: &mut Ui, d: &mut Config) {
+        ui.weak(tr!("upload-intro"));
+        ui.add_space(6.0);
+        ui.horizontal(|ui| {
+            if ui.button(format!("{}  {}", icon::FILE_ARROW_DOWN, tr!("upload-import"))).clicked()
+                && let Some(path) = rfd::FileDialog::new().add_filter("ShareX", &["sxcu", "json"]).pick_file()
+            {
+                match std::fs::read_to_string(&path).map_err(anyhow::Error::from).and_then(|t| Uploader::from_sxcu(&t)) {
+                    Ok(u) => {
+                        d.uploader = u;
+                        self.import_error = None;
+                    }
+                    Err(e) => self.import_error = Some(format!("{e:#}")),
+                }
+            }
+            if d.uploader != Uploader::default() && ui.button(tr!("upload-clear")).clicked() {
+                d.uploader = Uploader::default();
+                d.destinations.retain(|x| *x != Destination::Upload);
+                if d.destinations.is_empty() {
+                    d.destinations.push(Destination::Editor);
+                }
+            }
+        });
+        if let Some(e) = &self.import_error {
+            ui.colored_label(ui.visuals().error_fg_color, e);
+        }
+        ui.add_space(4.0);
+        let u = &mut d.uploader;
+        group(ui, |ui| {
+            let field = |ui: &mut Ui, text: &mut String, hint: &str| {
+                ui.add(egui::TextEdit::singleline(text).hint_text(hint).desired_width(280.0));
+            };
+            row(ui, &tr!("upload-name"), Some(&tr!("upload-name-sub")), |ui| field(ui, &mut u.name, "My server"));
+            divider(ui);
+            row(ui, &tr!("upload-url"), None, |ui| field(ui, &mut u.url, "https://example.com/upload"));
+            divider(ui);
+            row(ui, &tr!("upload-method"), None, |ui| {
+                segmented(ui, &mut u.method, &[(UploadMethod::Post, "POST".into()), (UploadMethod::Put, "PUT".into())]);
+            });
+            divider(ui);
+            row(ui, &tr!("upload-body"), None, |ui| {
+                segmented(ui, &mut u.body, &[(UploadBody::Multipart, tr!("upload-body-form")), (UploadBody::Binary, tr!("upload-body-binary"))]);
+            });
+            if u.body == UploadBody::Multipart {
+                divider(ui);
+                row(ui, &tr!("upload-file-field"), None, |ui| field(ui, &mut u.file_field, "file"));
+            }
+            divider(ui);
+            row(ui, &tr!("upload-link"), Some(&tr!("upload-link-sub")), |ui| field(ui, &mut u.link, "$json:data.link$"));
+        });
+
+        caption(ui, &tr!("upload-headers"));
+        group(ui, |ui| pairs_editor(ui, "headers", &mut u.headers, "Authorization", "Bearer …"));
+        if u.body == UploadBody::Multipart {
+            caption(ui, &tr!("upload-form"));
+            group(ui, |ui| pairs_editor(ui, "form", &mut u.form, "name", "value"));
+        }
+        ui.weak(tr!("upload-secrets-note"));
+        ui.add_space(8.0);
+
+        let state = self.upload_test.lock().unwrap().clone();
+        ui.horizontal(|ui| {
+            let running = matches!(state, UploadTest::Running);
+            if ui.add_enabled(u.is_ready() && !running, egui::Button::new(format!("{}  {}", icon::CLOUD_ARROW_UP, tr!("upload-test")))).clicked() {
+                self.start_upload_test(ui.ctx().clone(), u.clone());
+            }
+            match state {
+                UploadTest::Idle => {}
+                UploadTest::Running => {
+                    ui.spinner();
+                }
+                UploadTest::Done(Ok(link)) => {
+                    ui.label(format!("{} ", icon::CHECK_CIRCLE));
+                    if ui.link(&link).clicked() {
+                        ui.ctx().open_url(egui::OpenUrl::new_tab(&link));
+                    }
+                }
+                UploadTest::Done(Err(e)) => {
+                    ui.colored_label(ui.visuals().error_fg_color, e);
+                }
+            }
+        });
+        if !u.is_ready() {
+            ui.weak(tr!("upload-not-ready"));
+        }
+    }
+
+    /// Upload a small generated picture, to check the settings.
+    fn start_upload_test(&self, ctx: egui::Context, uploader: Uploader) {
+        *self.upload_test.lock().unwrap() = UploadTest::Running;
+        let state = Arc::clone(&self.upload_test);
+        std::thread::spawn(move || {
+            let image = rustshot_core::RgbaImage::from_fn(240, 120, |x, y| {
+                let t = (x + y) as f32 / 360.0;
+                rustshot_core::image::Rgba([(40.0 + 180.0 * t) as u8, 120, (220.0 - 160.0 * t) as u8, 255])
+            });
+            let mut png = Vec::new();
+            let result = image
+                .write_to(&mut std::io::Cursor::new(&mut png), rustshot_core::image::ImageFormat::Png)
+                .map_err(anyhow::Error::from)
+                .and_then(|_| uploader.upload(&png, "rustshot-test.png", "image/png"))
+                .map_err(|e| format!("{e:#}"));
+            *state.lock().unwrap() = UploadTest::Done(result);
+            ctx.request_repaint();
         });
     }
 
@@ -759,6 +896,37 @@ fn short_path(p: &std::path::Path) -> String {
 }
 
 // ---- small widgets ----
+
+/// The uploader's Test button.
+#[derive(Clone, Default)]
+enum UploadTest {
+    #[default]
+    Idle,
+    Running,
+    Done(Result<String, String>),
+}
+
+/// Editable name/value pairs (headers, form fields), with add and remove.
+fn pairs_editor(ui: &mut Ui, id: &str, pairs: &mut Vec<(String, String)>, name_hint: &str, value_hint: &str) {
+    let mut remove = None;
+    for (i, (k, v)) in pairs.iter_mut().enumerate() {
+        ui.push_id((id, i), |ui| {
+            ui.horizontal(|ui| {
+                ui.add(egui::TextEdit::singleline(k).hint_text(name_hint).desired_width(150.0));
+                ui.add(egui::TextEdit::singleline(v).hint_text(value_hint).font(egui::TextStyle::Monospace).desired_width(ui.available_width() - 36.0));
+                if ui.small_button(icon::X).on_hover_text(tr!("upload-remove")).clicked() {
+                    remove = Some(i);
+                }
+            });
+        });
+    }
+    if let Some(i) = remove {
+        pairs.remove(i);
+    }
+    if ui.small_button(format!("{}  {}", icon::PLUS, tr!("upload-add"))).clicked() {
+        pairs.push((String::new(), String::new()));
+    }
+}
 
 fn caption(ui: &mut Ui, text: &str) {
     ui.add_space(4.0);

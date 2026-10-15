@@ -29,10 +29,12 @@ pub enum Destination {
     Share,
     /// Recognise the text in the image and copy it.
     CopyText,
+    /// Send to the custom uploader and copy the link.
+    Upload,
 }
 
 impl Destination {
-    pub const ALL: [Destination; 10] = [
+    pub const ALL: [Destination; 11] = [
         Destination::Picker,
         Destination::Editor,
         Destination::Clipboard,
@@ -43,6 +45,7 @@ impl Destination {
         Destination::Email,
         Destination::Share,
         Destination::CopyText,
+        Destination::Upload,
     ];
 
     /// Whether this platform offers the destination.
@@ -63,6 +66,7 @@ impl Destination {
             Destination::Email => tr!("dest-email"),
             Destination::Share => tr!("dest-share"),
             Destination::CopyText => tr!("dest-copy-text"),
+            Destination::Upload => tr!("dest-upload"),
         }
     }
 }
@@ -328,6 +332,8 @@ pub struct Config {
     /// The newest version the user has been told about, so each one is
     /// announced once.
     pub announced_version: Option<String>,
+    /// The custom uploader (Settings → Uploads); unused until set up.
+    pub uploader: crate::share::upload::Uploader,
 }
 
 impl Default for Config {
@@ -354,6 +360,7 @@ impl Default for Config {
             external_app: None,
             check_for_updates: true,
             announced_version: None,
+            uploader: Default::default(),
         }
     }
 }
