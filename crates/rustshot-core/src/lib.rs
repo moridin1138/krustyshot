@@ -11,6 +11,9 @@ pub mod output;
 pub mod permissions;
 pub mod pointer;
 pub mod recording;
+#[cfg(target_os = "macos")]
+pub mod sck;
+pub mod scroll;
 pub mod share;
 pub mod update;
 

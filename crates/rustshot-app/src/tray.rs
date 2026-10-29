@@ -11,6 +11,7 @@ pub const CAPTURE_REGION: &str = "capture_region";
 pub const CAPTURE_LAST_REGION: &str = "capture_last_region";
 pub const CAPTURE_WINDOW: &str = "capture_window";
 pub const CAPTURE_FULLSCREEN: &str = "capture_fullscreen";
+pub const CAPTURE_SCROLLING: &str = "capture_scrolling";
 pub const RECORD_REGION: &str = "record_region";
 pub const RECORD_WINDOW: &str = "record_window";
 pub const RECORD_FULLSCREEN: &str = "record_fullscreen";
@@ -46,6 +47,7 @@ impl Tray {
             &item(CAPTURE_LAST_REGION, &tr!("capture-last-region"), Some(&hk.last_region)),
             &item(CAPTURE_WINDOW, &tr!("capture-window"), Some(&hk.window)),
             &item(CAPTURE_FULLSCREEN, &tr!("capture-fullscreen"), Some(&hk.fullscreen)),
+            &item(CAPTURE_SCROLLING, &tr!("capture-scrolling"), Some(&hk.scroll)),
             &PredefinedMenuItem::separator(),
         ])?;
         if recording {

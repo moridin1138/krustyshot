@@ -83,12 +83,19 @@ enum HotkeyField {
     Window,
     Fullscreen,
     LastRegion,
+    Scroll,
     Record,
 }
 
 impl HotkeyField {
-    const ALL: [HotkeyField; 5] =
-        [HotkeyField::Region, HotkeyField::Window, HotkeyField::Fullscreen, HotkeyField::LastRegion, HotkeyField::Record];
+    const ALL: [HotkeyField; 6] = [
+        HotkeyField::Region,
+        HotkeyField::Window,
+        HotkeyField::Fullscreen,
+        HotkeyField::LastRegion,
+        HotkeyField::Scroll,
+        HotkeyField::Record,
+    ];
 
     fn label(self) -> String {
         match self {
@@ -96,6 +103,7 @@ impl HotkeyField {
             HotkeyField::Window => tr!("capture-window"),
             HotkeyField::Fullscreen => tr!("capture-fullscreen"),
             HotkeyField::LastRegion => tr!("capture-last-region"),
+            HotkeyField::Scroll => tr!("capture-scrolling"),
             HotkeyField::Record => tr!("shortcut-record"),
         }
     }
@@ -106,6 +114,7 @@ impl HotkeyField {
             HotkeyField::Window => &mut h.window,
             HotkeyField::Fullscreen => &mut h.fullscreen,
             HotkeyField::LastRegion => &mut h.last_region,
+            HotkeyField::Scroll => &mut h.scroll,
             HotkeyField::Record => &mut h.record,
         }
     }
@@ -649,6 +658,14 @@ impl SettingsWindow {
                     if !path.exists() {
                         let _ = d.save();
                     }
+                    platform::reveal(&path);
+                }
+            });
+            divider(ui);
+            row(ui, &tr!("about-log-file"), Some(&tr!("about-log-file-sub")), |ui| {
+                if let Some(path) = rustshot_core::config::log_path().filter(|p| p.exists())
+                    && ui.button(if cfg!(target_os = "macos") { tr!("button-show-in-finder") } else { tr!("button-show-file") }).clicked()
+                {
                     platform::reveal(&path);
                 }
             });

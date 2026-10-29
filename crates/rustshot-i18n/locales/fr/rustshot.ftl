@@ -160,6 +160,8 @@ about-release-notes = Notes de version
 about-reset-all = Réinitialiser tous les réglages
 about-reset-all-tip = Rétablir chaque réglage à sa valeur par défaut
 about-settings-file = Fichier de réglages
+about-log-file = Fichier journal
+about-log-file-sub = Utile pour signaler un problème
 
 ## Window and file titles
 
@@ -359,3 +361,17 @@ upload-test = Tester l'envoi
 upload-not-ready = Indiquez un nom et une adresse commençant par https:// pour utiliser l'envoi.
 upload-remove = Supprimer
 upload-add = Ajouter
+
+## Scrolling capture
+capture-scrolling = Capturer une zone défilante…
+title-scrolling = Capture défilante
+overlay-scroll-help-region = Capture défilante : faites glisser sur la seule partie qui défile, comme la page ou le document  ·  Espace : mode fenêtre  ·  Échap : annuler
+overlay-scroll-help-window = Capture défilante : cliquez sur la fenêtre à faire défiler  ·  Espace : mode zone  ·  Échap : annuler
+scroll-bar-title = Capture défilante Rustshot
+scroll-progress = Défilement… { $pixels } px
+scroll-hint = Cliquez n'importe où pour arrêter
+scroll-stop = Arrêter
+scroll-needs-accessibility = La capture défilante nécessite l'accès Accessibilité : autorisez Rustshot dans Réglages Système, puis réessayez
+scroll-unsupported = La capture défilante nécessite une session X11. Wayland ne permet pas aux apps de faire défiler d'autres fenêtres.
+scroll-limit = Arrêtée à la taille maximale de 25 000 pixels
+scroll-lost = La page a changé pendant le défilement, la capture s'est donc arrêtée plus tôt

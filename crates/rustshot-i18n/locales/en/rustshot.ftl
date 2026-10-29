@@ -160,6 +160,8 @@ about-release-notes = Release notes
 about-reset-all = Reset all settings
 about-reset-all-tip = Restore every setting to its default
 about-settings-file = Settings file
+about-log-file = Log file
+about-log-file-sub = Helpful when reporting a problem
 
 ## Window and file titles
 
@@ -359,3 +361,17 @@ upload-test = Test upload
 upload-not-ready = Add a name and an address starting with https:// to use the uploader.
 upload-remove = Remove
 upload-add = Add
+
+## Scrolling capture
+capture-scrolling = Capture scrolling region…
+title-scrolling = Scrolling capture
+overlay-scroll-help-region = Scrolling capture: drag over just the part that scrolls, such as the page or document  ·  Space: window mode  ·  Esc: cancel
+overlay-scroll-help-window = Scrolling capture: click the window to scroll  ·  Space: region mode  ·  Esc: cancel
+scroll-bar-title = Rustshot scrolling capture
+scroll-progress = Scrolling… { $pixels } px
+scroll-hint = Click anywhere to stop
+scroll-stop = Stop
+scroll-needs-accessibility = Scrolling capture needs Accessibility: allow Rustshot in System Settings, then try again
+scroll-unsupported = Scrolling capture needs an X11 session. Wayland doesn't let apps scroll other windows.
+scroll-limit = Stopped at the size limit of 25,000 pixels
+scroll-lost = The page changed while scrolling, so the capture stopped early

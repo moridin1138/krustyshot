@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+
+- **Capture scrolling region** (menu, or ⌥⇧S on macOS and Ctrl+Alt+Print Screen elsewhere): drag over something taller than the screen, such as a web page or document, and Rustshot scrolls it for you and joins the screenshots into one tall image. It stops at the bottom, when you click, or at 25,000 pixels. Fixed headers and footers appear once. The image goes to your after-capture destinations like any screenshot. On macOS it needs the Accessibility permission, which it asks for the first time; on Linux it needs X11.
+
+- Rustshot keeps a log file (Settings → About → Log file; `~/Library/Logs/Rustshot/` on macOS), with the previous run's log kept alongside, to help when reporting a problem.
+
+### Fixed
+
+- On recent macOS, screenshots included the mouse pointer even with **Include mouse pointer** turned off, because the system's older capture call adds it. macOS 14 and later now capture with ScreenCaptureKit, which leaves it out; the setting draws the pointer when it's on, as before.
+
 ## [0.5.0] - 2026-10-15
 
 Sound in recordings, and more places to send captures: other apps, the printer, email, Share, text recognition and your own upload server.

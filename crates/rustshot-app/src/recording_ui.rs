@@ -37,7 +37,7 @@ const TIME_WIDTH: f32 = 62.0;
 const SIZE_WIDTH: f32 = 70.0;
 const ICON_WIDTH: f32 = 26.0;
 
-const RECORDING_RED: Color32 = Color32::from_rgb(230, 40, 40);
+pub const RECORDING_RED: Color32 = Color32::from_rgb(230, 40, 40);
 /// How dark the area outside the recording is.
 const DIM: Color32 = Color32::from_black_alpha(110);
 
@@ -55,45 +55,10 @@ impl ActiveRecording {
     }
 
     /// Dim the recorded display outside the recorded area, with a thin red
-    /// line around it. The window ignores the mouse and is kept out of
-    /// recordings and Mission Control.
+    /// line around it (region and window recordings only).
     pub fn show_frame(&mut self, ctx: &egui::Context) {
         let (Some(m), true) = (self.monitor, self.wants_frame()) else { return };
-        let id = egui::ViewportId::from_hash_of("rustshot-recording-frame");
-        let title = tr!("recording-frame-title");
-        let builder = egui::ViewportBuilder::default()
-            .with_title(title.clone())
-            .with_position([m.x as f32, m.y as f32])
-            .with_inner_size([m.w as f32, m.h as f32])
-            .with_decorations(false)
-            .with_resizable(false)
-            .with_has_shadow(false)
-            .with_transparent(true)
-            .with_mouse_passthrough(true)
-            .with_taskbar(false)
-            .with_active(false)
-            .with_window_level(egui::WindowLevel::AlwaysOnTop);
-        let region = self.region;
-        ctx.show_viewport_immediate(id, builder, |ui, _| {
-            // Work from where the window really is: the OS may keep it clear
-            // of the menu bar, so it can sit lower than asked.
-            let origin = ui.ctx().input(|i| i.viewport().inner_rect).map(|r| r.min).unwrap_or(egui::pos2(m.x as f32, m.y as f32));
-            let screen = ui.ctx().content_rect();
-            let area = egui::Rect::from_min_size(
-                egui::pos2(region.x as f32 - origin.x, region.y as f32 - origin.y),
-                egui::vec2(region.w as f32, region.h as f32),
-            );
-            let painter = ui.painter();
-            for r in outside(screen, area) {
-                painter.rect_filled(r, 0.0, DIM);
-            }
-            painter.rect_stroke(area, 0.0, egui::Stroke::new(2.0, RECORDING_RED), egui::StrokeKind::Outside);
-        });
-        if !self.frame_shown {
-            platform::exclude_from_capture(&title);
-            platform::make_transient(&title);
-            self.frame_shown = true;
-        }
+        show_area_frame(ctx, "rustshot-recording-frame", self.region, m, &mut self.frame_shown);
     }
 
     /// Where the bar goes: just above the recorded area if there's room on
@@ -103,21 +68,7 @@ impl ActiveRecording {
     }
 
     fn bar_position(&self) -> egui::Pos2 {
-        let size = self.bar_size();
-        let r = self.region;
-        let m = self.monitor.unwrap_or(r);
-        let x = (r.x + r.w / 2.0 - size.x as f64 / 2.0).clamp(m.x + 8.0, (m.right() - size.x as f64 - 8.0).max(m.x));
-        let gap = 10.0;
-        let above = r.y - size.y as f64 - gap;
-        let below = r.bottom() + gap;
-        let y = if above >= m.y + 30.0 {
-            above
-        } else if below + size.y as f64 <= m.bottom() - 8.0 {
-            below
-        } else {
-            r.y + gap
-        };
-        egui::pos2(x as f32, y as f32)
+        place_bar(self.region, self.monitor, self.bar_size())
     }
 
     pub fn show_bar(&mut self, ctx: &egui::Context) -> Option<BarAction> {
@@ -178,6 +129,64 @@ impl ActiveRecording {
         // Keep the timer ticking.
         ctx.request_repaint_after(Duration::from_millis(250));
         action
+    }
+}
+
+/// Where a floating bar for `region` goes: just above it if there's room on
+/// its display, else just below, else inside its top edge.
+pub fn place_bar(r: Region, monitor: Option<Region>, size: egui::Vec2) -> egui::Pos2 {
+    let m = monitor.unwrap_or(r);
+    let x = (r.x + r.w / 2.0 - size.x as f64 / 2.0).clamp(m.x + 8.0, (m.right() - size.x as f64 - 8.0).max(m.x));
+    let gap = 10.0;
+    let above = r.y - size.y as f64 - gap;
+    let below = r.bottom() + gap;
+    let y = if above >= m.y + 30.0 {
+        above
+    } else if below + size.y as f64 <= m.bottom() - 8.0 {
+        below
+    } else {
+        r.y + gap
+    };
+    egui::pos2(x as f32, y as f32)
+}
+
+/// Dim the display `m` outside `region` (both global logical), with a thin
+/// red line around the region. The window ignores the mouse and is kept out
+/// of captures and Mission Control. `shown` tracks the one-time setup.
+pub fn show_area_frame(ctx: &egui::Context, id: &str, region: Region, m: Region, shown: &mut bool) {
+    let id = egui::ViewportId::from_hash_of(id);
+    let title = tr!("recording-frame-title");
+    let builder = egui::ViewportBuilder::default()
+        .with_title(title.clone())
+        .with_position([m.x as f32, m.y as f32])
+        .with_inner_size([m.w as f32, m.h as f32])
+        .with_decorations(false)
+        .with_resizable(false)
+        .with_has_shadow(false)
+        .with_transparent(true)
+        .with_mouse_passthrough(true)
+        .with_taskbar(false)
+        .with_active(false)
+        .with_window_level(egui::WindowLevel::AlwaysOnTop);
+    ctx.show_viewport_immediate(id, builder, |ui, _| {
+        // Work from where the window really is: the OS may keep it clear
+        // of the menu bar, so it can sit lower than asked.
+        let origin = ui.ctx().input(|i| i.viewport().inner_rect).map(|r| r.min).unwrap_or(egui::pos2(m.x as f32, m.y as f32));
+        let screen = ui.ctx().content_rect();
+        let area = egui::Rect::from_min_size(
+            egui::pos2(region.x as f32 - origin.x, region.y as f32 - origin.y),
+            egui::vec2(region.w as f32, region.h as f32),
+        );
+        let painter = ui.painter();
+        for r in outside(screen, area) {
+            painter.rect_filled(r, 0.0, DIM);
+        }
+        painter.rect_stroke(area, 0.0, egui::Stroke::new(2.0, RECORDING_RED), egui::StrokeKind::Outside);
+    });
+    if !*shown {
+        platform::exclude_from_capture(&title);
+        platform::make_transient(&title);
+        *shown = true;
     }
 }
 

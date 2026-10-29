@@ -114,6 +114,29 @@ pub fn primary_display_pixels() -> Option<(u32, u32, f64)> {
     }
 }
 
+/// One display's picture, without the mouse pointer. (Rustshot draws the
+/// pointer itself when that's asked for.) On recent macOS the classic
+/// capture call always includes the pointer, so macOS 14 and later use
+/// ScreenCaptureKit's screenshots instead, falling back if that fails.
+pub fn monitor_image(m: &xcap::Monitor) -> Result<RgbaImage> {
+    #[cfg(target_os = "macos")]
+    if crate::sck::screenshots_supported() {
+        let attempt = (|| -> Result<RgbaImage> {
+            let scale = m.scale_factor()? as f64;
+            let (w, h) = ((m.width()? as f64 * scale).round() as u32, (m.height()? as f64 * scale).round() as u32);
+            crate::sck::screenshot(m.id()?, w, h)
+        })();
+        match attempt {
+            Ok(image) => return Ok(image),
+            Err(e) => {
+                static WARNED: std::sync::Once = std::sync::Once::new();
+                WARNED.call_once(|| log::warn!("ScreenCaptureKit screenshot failed, using the classic capture: {e:#}"));
+            }
+        }
+    }
+    Ok(m.capture_image()?)
+}
+
 /// Grab all monitors and, optionally, the window list and mouse pointer.
 pub fn take_snapshot(opts: SnapshotOptions) -> Result<Snapshot> {
     let taken_at = chrono::Local::now();
@@ -138,7 +161,7 @@ pub fn take_snapshot(opts: SnapshotOptions) -> Result<Snapshot> {
 
     let mut shots = Vec::new();
     for (m, r) in monitors.iter().zip(&raw) {
-        let image = m.capture_image().context("capturing monitor")?;
+        let image = monitor_image(m).context("capturing monitor")?;
         shots.push(MonitorShot {
             id: m.id().unwrap_or_default(),
             name: m.friendly_name().or_else(|_| m.name()).unwrap_or_default(),

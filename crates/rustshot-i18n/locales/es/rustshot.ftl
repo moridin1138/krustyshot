@@ -160,6 +160,8 @@ about-release-notes = Notas de la versión
 about-reset-all = Restablecer todos los ajustes
 about-reset-all-tip = Devolver cada ajuste a su valor predeterminado
 about-settings-file = Archivo de ajustes
+about-log-file = Archivo de registro
+about-log-file-sub = Útil al informar de un problema
 
 ## Window and file titles
 
@@ -359,3 +361,17 @@ upload-test = Probar la subida
 upload-not-ready = Añade un nombre y una dirección que empiece por https:// para usar la subida.
 upload-remove = Quitar
 upload-add = Añadir
+
+## Scrolling capture
+capture-scrolling = Capturar zona con desplazamiento…
+title-scrolling = Captura con desplazamiento
+overlay-scroll-help-region = Captura con desplazamiento: arrastra solo sobre la parte que se desplaza, como la página o el documento  ·  Espacio: modo ventana  ·  Esc: cancelar
+overlay-scroll-help-window = Captura con desplazamiento: haz clic en la ventana que quieres desplazar  ·  Espacio: modo zona  ·  Esc: cancelar
+scroll-bar-title = Captura con desplazamiento de Rustshot
+scroll-progress = Desplazando… { $pixels } px
+scroll-hint = Haz clic en cualquier sitio para detener
+scroll-stop = Detener
+scroll-needs-accessibility = La captura con desplazamiento necesita Accesibilidad: permite Rustshot en Ajustes del Sistema y vuelve a intentarlo
+scroll-unsupported = La captura con desplazamiento necesita una sesión X11. Wayland no permite que las apps desplacen otras ventanas.
+scroll-limit = Detenida en el tamaño máximo de 25.000 píxeles
+scroll-lost = La página cambió durante el desplazamiento, así que la captura se detuvo antes

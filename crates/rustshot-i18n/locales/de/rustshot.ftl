@@ -160,6 +160,8 @@ about-release-notes = Versionshinweise
 about-reset-all = Alle Einstellungen zurücksetzen
 about-reset-all-tip = Alle Einstellungen auf ihre Standardwerte zurücksetzen
 about-settings-file = Einstellungsdatei
+about-log-file = Protokolldatei
+about-log-file-sub = Hilfreich, wenn du ein Problem meldest
 
 ## Window and file titles
 
@@ -359,3 +361,17 @@ upload-test = Upload testen
 upload-not-ready = Gib einen Namen und eine Adresse mit https:// an, um den Uploader zu nutzen.
 upload-remove = Entfernen
 upload-add = Hinzufügen
+
+## Scrolling capture
+capture-scrolling = Scrollenden Bereich aufnehmen…
+title-scrolling = Scrollende Aufnahme
+overlay-scroll-help-region = Scrollende Aufnahme: ziehe nur über den Teil, der scrollt, etwa die Seite oder das Dokument  ·  Leertaste: Fenstermodus  ·  Esc: abbrechen
+overlay-scroll-help-window = Scrollende Aufnahme: klicke auf das Fenster, das gescrollt werden soll  ·  Leertaste: Bereichsmodus  ·  Esc: abbrechen
+scroll-bar-title = Rustshot scrollende Aufnahme
+scroll-progress = Scrollen… { $pixels } px
+scroll-hint = Klicke irgendwo, um anzuhalten
+scroll-stop = Anhalten
+scroll-needs-accessibility = Die scrollende Aufnahme braucht Bedienungshilfen: erlaube Rustshot in den Systemeinstellungen und versuche es erneut
+scroll-unsupported = Die scrollende Aufnahme braucht eine X11-Sitzung. Wayland erlaubt Apps nicht, andere Fenster zu scrollen.
+scroll-limit = Bei der Höchstgröße von 25.000 Pixeln angehalten
+scroll-lost = Die Seite hat sich beim Scrollen verändert, daher wurde die Aufnahme früher beendet

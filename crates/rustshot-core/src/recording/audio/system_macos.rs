@@ -6,48 +6,36 @@
 //! (everything the Mac plays) except Rustshot's own; its video is kept as
 //! small and slow as possible and ignored.
 
-use std::ffi::{c_char, c_int, c_void};
 use std::ptr::{null_mut, NonNull};
 use std::sync::mpsc::channel;
-use std::sync::{Mutex, OnceLock};
+use std::sync::Mutex;
 use std::time::Duration;
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{bail, Context, Result};
 use block2::RcBlock;
 use objc2::rc::{Allocated, Retained};
-use objc2::runtime::{AnyClass, AnyObject, NSObject};
+use objc2::runtime::{AnyObject, NSObject};
 use objc2::{define_class, msg_send, AllocAnyThread, DefinedClass};
 use objc2_core_audio_types::{kAudioFormatFlagIsFloat, kAudioFormatFlagIsNonInterleaved, AudioBuffer, AudioBufferList};
 use objc2_core_foundation::CFRetained;
 use objc2_core_media::{CMAudioFormatDescriptionGetStreamBasicDescription, CMBlockBuffer, CMSampleBuffer, CMTime};
-use objc2_foundation::{NSError, NSOperatingSystemVersion, NSProcessInfo};
+use objc2_foundation::NSError;
 
 use super::SourceSender;
+use crate::sck::{self, class, wait_for, Owned};
 
-const FRAMEWORK: &std::ffi::CStr = c"/System/Library/Frameworks/ScreenCaptureKit.framework/ScreenCaptureKit";
 /// `SCStreamOutputType`.
 const OUTPUT_SCREEN: isize = 0;
 const OUTPUT_AUDIO: isize = 1;
 /// `kCMSampleBufferFlag_AudioBufferList_Assure16ByteAlignment`.
 const ASSURE_16_BYTE_ALIGNMENT: u32 = 1 << 0;
 
-unsafe extern "C" {
-    fn dlopen(path: *const c_char, mode: c_int) -> *mut c_void;
-}
-const RTLD_LAZY: c_int = 1;
 
 /// macOS 13+ and the framework loads.
 pub fn supported() -> bool {
-    static SUPPORTED: OnceLock<bool> = OnceLock::new();
-    *SUPPORTED.get_or_init(|| {
-        let v13 = NSOperatingSystemVersion { majorVersion: 13, minorVersion: 0, patchVersion: 0 };
-        NSProcessInfo::processInfo().isOperatingSystemAtLeastVersion(v13) && unsafe { !dlopen(FRAMEWORK.as_ptr(), RTLD_LAZY).is_null() }
-    })
+    sck::at_least(13) && sck::loaded()
 }
 
-fn class(name: &std::ffi::CStr) -> Result<&'static AnyClass> {
-    AnyClass::get(name).ok_or_else(|| anyhow!("{} is missing", name.to_string_lossy()))
-}
 
 pub struct Ivars {
     sender: Mutex<SourceSender>,
@@ -134,29 +122,6 @@ unsafe fn read_samples(buffer: &CMSampleBuffer) -> Option<(Vec<f32>, usize, u32)
             Some((plane(buffers.first()?).to_vec(), channels, asbd.mSampleRate as u32))
         }
     }
-}
-
-/// An object pointer (already retained) handed back from a completion block.
-struct Owned(*mut AnyObject);
-// The object is only used again on the thread that waits for it.
-unsafe impl Send for Owned {}
-
-/// Run an asynchronous ScreenCaptureKit call that reports `(result, error)`
-/// to a completion block, and wait for it.
-fn wait_for<R: Send + 'static>(call: impl FnOnce(&RcBlock<dyn Fn(*mut AnyObject, *mut NSError)>), map: fn(*mut AnyObject) -> Option<R>) -> Result<R> {
-    let (tx, rx) = channel::<Result<R, String>>();
-    let tx = Mutex::new(Some(tx));
-    let block = RcBlock::new(move |obj: *mut AnyObject, err: *mut NSError| {
-        let outcome = match unsafe { err.as_ref() } {
-            Some(e) => Err(e.localizedDescription().to_string()),
-            None => map(obj).ok_or_else(|| "no result".to_string()),
-        };
-        if let Some(tx) = tx.lock().ok().and_then(|mut t| t.take()) {
-            let _ = tx.send(outcome);
-        }
-    });
-    call(&block);
-    rx.recv_timeout(Duration::from_secs(5)).context("ScreenCaptureKit didn't answer")?.map_err(|e| anyhow!(e))
 }
 
 /// A running system-sound stream; stops when dropped.

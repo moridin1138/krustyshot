@@ -28,6 +28,8 @@ pub enum Outcome {
 pub enum Purpose {
     Screenshot,
     Recording,
+    /// Choosing the area for a scrolling capture.
+    Scrolling,
 }
 
 pub struct Overlay {
@@ -105,9 +107,19 @@ impl Overlay {
         if let Some(start) = self.drag_start.filter(|_| !self.window_mode) {
             return Some((Region::from_points(start, cursor), String::new()));
         }
+        if self.drag_only() {
+            return None;
+        }
         self.snapshot
             .window_at(cursor.0, cursor.1)
             .map(|w| (w.rect, w.title.clone()))
+    }
+
+    /// Scrolling capture needs a dragged selection: a whole window or
+    /// display usually includes parts that don't scroll (toolbars, sidebars,
+    /// other windows). Space still switches to picking a window.
+    fn drag_only(&self) -> bool {
+        self.purpose == Purpose::Scrolling && !self.window_mode
     }
 
     fn finish(&mut self, region: Region, title: String) {
@@ -190,6 +202,8 @@ impl Overlay {
             self.drag_start = None;
             match (dragged, self.snapshot.window_at(cursor.0, cursor.1)) {
                 (Some(r), _) => self.finish(r, String::new()),
+                // A click without a drag: keep waiting for one.
+                (None, _) if self.drag_only() => {}
                 (None, Some(w)) => {
                     let (r, t) = (w.rect, w.title.clone());
                     self.finish(r, t);
@@ -265,6 +279,8 @@ impl Overlay {
                 (Purpose::Recording, false) => tr!("overlay-record-help-region"),
                 (Purpose::Screenshot, true) => tr!("overlay-help-window"),
                 (Purpose::Screenshot, false) => tr!("overlay-help-region"),
+                (Purpose::Scrolling, true) => tr!("overlay-scroll-help-window"),
+                (Purpose::Scrolling, false) => tr!("overlay-scroll-help-region"),
             };
             pill(painter, Pos2::new(screen.center().x, screen.min.y + 40.0), Align2::CENTER_TOP, &text);
         }

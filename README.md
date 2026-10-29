@@ -12,6 +12,7 @@ A cross-platform screenshot tool modelled on [Greenshot](https://getgreenshot.or
 - Window capture: hover to highlight, click to capture (Space switches between region and window mode, like Greenshot)
 - Regions that span several displays, and full-screen capture of all displays
 - Capture last region, capture delay, and optionally the mouse pointer
+- Scrolling capture: drag over a web page or document and Rustshot scrolls it and joins the screenshots into one tall image (fixed headers and footers appear once)
 - Destination picker after each capture: open in editor, copy, save directly, save as, open in another app, print, email, Share (macOS), copy the text in the image (OCR), and upload to your own server or image host (ShareX `.sxcu` uploaders can be imported)
 - Image editor with Phosphor icons: select, move and resize, rectangle, ellipse, line, arrow, freehand, text, speech bubble, step counter, highlight (marker, spotlight, grey out the rest, magnify), obfuscate (pixelate or blur), crop, drop shadows, undo and redo
 - Effects: drop shadow, torn edges, border, greyscale, invert, rotate, resize
@@ -32,6 +33,7 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each version and [docs/ROAD
 | Capture window | ⌥⇧W | Alt+Print Screen |
 | Capture full screen | ⌥⇧F | Ctrl+Print Screen |
 | Capture last region | ⌥⇧L | Shift+Print Screen |
+| Capture scrolling region | ⌥⇧S | Ctrl+Alt+Print Screen |
 | Start or stop recording | ⌥⇧V | Ctrl+Shift+Print Screen |
 
 Change them in Settings (click a shortcut and press the new keys). macOS keeps ⌘⇧3/4/5 for its own screenshot tool.
@@ -62,7 +64,7 @@ On Windows and Linux use Ctrl instead of ⌘.
 
 Download the package for your platform from the [releases page](https://github.com/moridin1138/rustshot/releases).
 
-- **macOS:** unzip and move `Rustshot.app` to Applications, then open it. macOS warns the first time; see [Security warnings when installing](#security-warnings-when-installing). Updates keep the Screen Recording and Microphone permissions.
+- **macOS:** unzip and move `Rustshot.app` to Applications, then open it. macOS warns the first time; see [Security warnings when installing](#security-warnings-when-installing). Updates keep the Screen Recording, Microphone and Accessibility permissions.
 - **Windows:** unzip and run `rustshot.exe`. Windows may warn the first time; see below.
 - **Linux:** extract and run `rustshot`. It needs GTK 3 and an appindicator library.
 
@@ -94,7 +96,7 @@ You do this once per download. Every release is signed with the same Rustshot ce
 
 ### macOS permissions
 
-Screenshots and recordings need **Screen Recording** permission. macOS asks the first time Rustshot runs. If it's missing, Rustshot shows a window explaining how to turn it on (System Settings → Privacy & Security → Screen Recording, then restart Rustshot); when running with `cargo run`, give the permission to your terminal app instead. Recording the microphone also needs **Microphone** permission, which macOS asks for when you turn the Microphone switch on in Settings → Recording.
+Screenshots and recordings need **Screen Recording** permission. macOS asks the first time Rustshot runs. If it's missing, Rustshot shows a window explaining how to turn it on (System Settings → Privacy & Security → Screen Recording, then restart Rustshot); when running with `cargo run`, give the permission to your terminal app instead. Recording the microphone also needs **Microphone** permission, which macOS asks for when you turn the Microphone switch on in Settings → Recording. **Capture scrolling region** needs **Accessibility** permission, so it can scroll other apps; macOS asks the first time you use it.
 
 ## Build from source
 

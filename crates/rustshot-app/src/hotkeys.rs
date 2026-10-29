@@ -34,6 +34,7 @@ impl HotkeyRegistry {
             (&keys.window, CaptureMode::Window),
             (&keys.fullscreen, CaptureMode::Fullscreen),
             (&keys.last_region, CaptureMode::LastRegion),
+            (&keys.scroll, CaptureMode::ScrollRegion),
             (&keys.record, CaptureMode::RecordRegion),
         ] {
             if text.trim().is_empty() {

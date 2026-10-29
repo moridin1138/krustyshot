@@ -18,6 +18,7 @@ use rustshot_i18n::tr;
 use crate::hotkeys::HotkeyRegistry;
 use crate::overlay::{Outcome, Overlay, Purpose};
 use crate::recording_ui::{ActiveRecording, BarAction};
+use crate::scroll_ui::ActiveScroll;
 use crate::settings_ui::SettingsWindow;
 use crate::tray::{self, Tray};
 use crate::platform;
@@ -29,6 +30,8 @@ pub enum CaptureMode {
     Window,
     Fullscreen,
     LastRegion,
+    /// A region scrolled automatically and joined into one tall image.
+    ScrollRegion,
     /// Screen recordings (each stops the current recording if one is running).
     RecordRegion,
     RecordWindow,
@@ -46,6 +49,7 @@ impl CaptureMode {
             CaptureMode::Window => tr!("capture-window"),
             CaptureMode::Fullscreen => tr!("capture-fullscreen"),
             CaptureMode::LastRegion => tr!("capture-last-region"),
+            CaptureMode::ScrollRegion => tr!("capture-scrolling"),
             CaptureMode::RecordRegion => tr!("record-region"),
             CaptureMode::RecordWindow => tr!("record-window"),
             CaptureMode::RecordFullscreen => tr!("record-fullscreen"),
@@ -122,6 +126,7 @@ pub struct App {
     hotkeys_paused: bool,
     overlay_purpose: Purpose,
     recording: Option<ActiveRecording>,
+    scrolling: Option<ActiveScroll>,
     /// When the low-disk warning was last shown for screenshots (it is
     /// shown at most every 30 minutes for those; always for recordings).
     last_disk_warning: Option<Instant>,
@@ -202,6 +207,7 @@ impl App {
             hotkeys_paused: false,
             overlay_purpose: Purpose::Screenshot,
             recording: None,
+            scrolling: None,
             last_disk_warning: None,
             jobs: Vec::new(),
             // The first automatic check runs shortly after start-up.
@@ -426,6 +432,64 @@ impl App {
         }
     }
 
+    /// Scrolling needs to send scroll events to other apps. On macOS that
+    /// needs Accessibility; ask here, before any overlay is up, so the
+    /// system prompt can be answered.
+    fn scroll_access(&mut self) -> bool {
+        use rustshot_core::scroll::input::{self, Access};
+        match input::access() {
+            Access::Granted => true,
+            Access::NeedsPermission => {
+                log::warn!("scrolling capture: no Accessibility permission");
+                input::request_access();
+                self.notify(&tr!("scroll-needs-accessibility"), None);
+                false
+            }
+            Access::Unsupported => {
+                self.notice(&tr!("capture-scrolling"), &tr!("scroll-unsupported"), false);
+                false
+            }
+        }
+    }
+
+    fn start_scroll(&mut self, region: Region, target: Option<(u32, CropRect, f64)>, monitor: Option<Region>, title: String, taken_at: DateTime<Local>) {
+        let Some((monitor_id, crop, scale)) = target else {
+            self.notice(&tr!("notice-capture-failed"), &tr!("recording-no-display"), false);
+            return;
+        };
+        match rustshot_core::scroll::ScrollCapture::start(monitor_id, crop, scale) {
+            Ok(capture) => self.scrolling = Some(ActiveScroll::new(capture, region, monitor, title, taken_at)),
+            Err(e) => self.notice(&tr!("notice-capture-failed"), &format!("{e:#}"), false),
+        }
+    }
+
+    /// The scrolling capture's bar, and its image once it's done.
+    fn show_scrolling(&mut self, ctx: &egui::Context) {
+        let Some(active) = &mut self.scrolling else { return };
+        if !active.capture.is_finished() {
+            active.show(ctx);
+            return;
+        }
+        let active = self.scrolling.take().unwrap();
+        let title = if active.title.trim().is_empty() { tr!("title-scrolling") } else { active.title.clone() };
+        match active.capture.finish() {
+            Ok(outcome) => {
+                use rustshot_core::scroll::EndReason;
+                match outcome.reason {
+                    EndReason::Limit => self.notify(&tr!("scroll-limit"), None),
+                    EndReason::LostTrack => self.notify(&tr!("scroll-lost"), None),
+                    EndReason::Bottom | EndReason::Stopped => {}
+                }
+                self.deliver(Capture { image: outcome.image, title, taken_at: active.taken_at });
+            }
+            Err(e) => {
+                log::error!("scrolling capture: {e:#}");
+                self.notice(&tr!("notice-capture-failed"), &format!("{e:#}"), false);
+            }
+        }
+        ctx.request_repaint();
+    }
+
     fn finish_recording(&mut self, discard: bool) {
         let Some(active) = self.recording.take() else { return };
         let result = active.recording.finish(discard);
@@ -545,6 +609,7 @@ impl App {
             tray::CAPTURE_WINDOW => self.request_capture(CaptureMode::Window, true, ctx),
             tray::CAPTURE_FULLSCREEN => self.request_capture(CaptureMode::Fullscreen, true, ctx),
             tray::CAPTURE_LAST_REGION => self.request_capture(CaptureMode::LastRegion, true, ctx),
+            tray::CAPTURE_SCROLLING => self.request_capture(CaptureMode::ScrollRegion, true, ctx),
             tray::RECORD_REGION => self.request_capture(CaptureMode::RecordRegion, true, ctx),
             tray::RECORD_WINDOW => self.request_capture(CaptureMode::RecordWindow, true, ctx),
             tray::RECORD_FULLSCREEN => self.request_capture(CaptureMode::RecordFullscreen, true, ctx),
@@ -635,6 +700,12 @@ impl App {
         if mode.is_recording() && self.recording.is_some() {
             return;
         }
+        if self.scrolling.is_some() {
+            return;
+        }
+        if mode == CaptureMode::ScrollRegion && !self.scroll_access() {
+            return;
+        }
         if !self.disk_space_ok(mode.is_recording()) {
             return;
         }
@@ -650,6 +721,15 @@ impl App {
                     self.overlay_purpose = Purpose::Recording;
                     let window_mode = mode == CaptureMode::RecordWindow;
                     self.overlay = Some(Overlay::new(snap, window_mode, self.config.show_magnifier, Purpose::Recording));
+                })
+            }
+            CaptureMode::ScrollRegion => {
+                // The overlay is only for choosing the area; the image comes
+                // from the live screen as it scrolls.
+                let opts = capture::SnapshotOptions { windows: true, pointer: false };
+                capture::take_snapshot(opts).map(|snap| {
+                    self.overlay_purpose = Purpose::Scrolling;
+                    self.overlay = Some(Overlay::new(snap, false, self.config.show_magnifier, Purpose::Scrolling));
                 })
             }
             CaptureMode::RecordFullscreen => {
@@ -892,6 +972,10 @@ impl App {
         if let Outcome::Captured { image, title, region, target, monitor } = outcome {
             if self.overlay_purpose == Purpose::Recording {
                 self.start_recording(region, target, monitor, &title);
+                return;
+            }
+            if self.overlay_purpose == Purpose::Scrolling {
+                self.start_scroll(region, target, monitor, title, taken_at);
                 return;
             }
             self.config.last_region = Some(region);
@@ -1244,6 +1328,7 @@ impl eframe::App for App {
         }
         self.show_overlay(&ctx);
         self.show_recording(&ctx);
+        self.show_scrolling(&ctx);
         self.show_picker(&ctx);
         self.show_editors(&ctx);
         self.show_settings(&ctx);

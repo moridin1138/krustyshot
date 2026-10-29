@@ -269,6 +269,8 @@ pub struct Hotkeys {
     pub window: String,
     pub fullscreen: String,
     pub last_region: String,
+    /// Scrolling capture of a region.
+    pub scroll: String,
     /// Start recording (pressed again: stop).
     pub record: String,
 }
@@ -282,6 +284,7 @@ impl Default for Hotkeys {
                 window: "alt+shift+KeyW".into(),
                 fullscreen: "alt+shift+KeyF".into(),
                 last_region: "alt+shift+KeyL".into(),
+                scroll: "alt+shift+KeyS".into(),
                 record: "alt+shift+KeyV".into(),
             }
         } else {
@@ -291,6 +294,7 @@ impl Default for Hotkeys {
                 window: "alt+PrintScreen".into(),
                 fullscreen: "control+PrintScreen".into(),
                 last_region: "shift+PrintScreen".into(),
+                scroll: "control+alt+PrintScreen".into(),
                 record: "control+shift+PrintScreen".into(),
             }
         }
@@ -362,6 +366,16 @@ impl Default for Config {
             announced_version: None,
             uploader: Default::default(),
         }
+    }
+}
+
+/// Where Rustshot writes its log: `~/Library/Logs/Rustshot` on macOS (so
+/// Console.app finds it), the local app data folder elsewhere.
+pub fn log_path() -> Option<PathBuf> {
+    if cfg!(target_os = "macos") {
+        directories::BaseDirs::new().map(|d| d.home_dir().join("Library/Logs/Rustshot/rustshot.log"))
+    } else {
+        directories::ProjectDirs::from("org", "Rustshot", "Rustshot").map(|d| d.data_local_dir().join("rustshot.log"))
     }
 }
 
