@@ -6,19 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
-### Added
+## [0.5.1] - 2026-10-29
 
-- **Capture scrolling region** (menu, or ⌥⇧S on macOS and Ctrl+Alt+Print Screen elsewhere): drag over something taller than the screen, such as a web page or document, and Rustshot scrolls it for you and joins the screenshots into one tall image. It stops at the bottom, when you click, or at 25,000 pixels. Fixed headers and footers appear once. The image goes to your after-capture destinations like any screenshot. On macOS it needs the Accessibility permission, which it asks for the first time; on Linux it needs X11.
-
-- Rustshot keeps a log file (Settings → About → Log file; `~/Library/Logs/Rustshot/` on macOS), with the previous run's log kept alongside, to help when reporting a problem.
-
-### Fixed
-
-- On recent macOS, screenshots included the mouse pointer even with **Include mouse pointer** turned off, because the system's older capture call adds it. macOS 14 and later now capture with ScreenCaptureKit, which leaves it out; the setting draws the pointer when it's on, as before.
-
-## [0.5.0] - 2026-10-15
-
-Sound in recordings, and more places to send captures: other apps, the printer, email, Share, text recognition and your own upload server.
+Sound in recordings, scrolling screenshots, and more places to send captures: other apps, the printer, email, Share, text recognition and your own upload server. (0.5.0 was tagged but never published; its changes are included here.)
 
 ### Added
 
@@ -31,12 +21,18 @@ Sound in recordings, and more places to send captures: other apps, the printer, 
 - **Custom uploader** (Settings → Uploads): send captures to your own server or an image host and copy the link it returns. Set the address, POST or PUT, a form field or the raw file, headers (such as an API key), extra form fields, and where the link is in the reply (`$json:data.link$`). ShareX uploader files (`.sxcu`) can be imported, and **Test upload** checks the settings. Once set up, "Upload to …" appears in the quick menu, the after-capture settings and the editor.
 - Automatic update check (Settings → General, on by default): shortly after start-up and once a day Rustshot asks GitHub for the latest version number. A new version is announced once with a Download button, and the menu-bar menu offers it until you update.
 - Settings → About has **View on GitHub**, **Release notes** and **Report a problem** buttons right under the version.
+- **Capture scrolling region** (menu, or ⌥⇧S on macOS and Ctrl+Alt+Print Screen elsewhere): drag over something taller than the screen, such as a web page or document, and Rustshot scrolls it for you and joins the screenshots into one tall image. It stops at the bottom, when you click, or at 25,000 pixels. Fixed headers and footers appear once. The image goes to your after-capture destinations like any screenshot. On macOS it needs the Accessibility permission, which it asks for the first time; on Linux it needs X11.
+- Rustshot keeps a log file (Settings → About → Log file; `~/Library/Logs/Rustshot/` on macOS), with the previous run's log kept alongside, to help when reporting a problem.
 
 ### Changed
 
 - **About Rustshot** in the menu-bar menu opens Settings → About instead of a separate window.
 - The recording bar keeps every item in a fixed place, so the timer, size and icons don't shift as they change.
 - Releases are published as the latest release rather than as pre-releases; only versions with a suffix such as `-beta.1` are pre-releases.
+
+### Fixed
+
+- On recent macOS, screenshots included the mouse pointer even with **Include mouse pointer** turned off, because the system's older capture call adds it. macOS 14 and later now capture with ScreenCaptureKit, which leaves it out; the setting draws the pointer when it's on, as before.
 
 ## [0.4.0] - 2026-10-14
 
@@ -126,8 +122,8 @@ First release, licensed under GPL-3.0-or-later.
 - App icon, `cargo xtask icons` to regenerate it, and macOS bundle metadata.
 - CI on macOS, Windows and Linux, and a tag-driven release workflow.
 
-[Unreleased]: https://github.com/moridin1138/rustshot/compare/v0.5.0...HEAD
-[0.5.0]: https://github.com/moridin1138/rustshot/compare/v0.4.0...v0.5.0
+[Unreleased]: https://github.com/moridin1138/rustshot/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/moridin1138/rustshot/compare/v0.4.0...v0.5.1
 [0.4.0]: https://github.com/moridin1138/rustshot/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/moridin1138/rustshot/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/moridin1138/rustshot/compare/v0.1.1...v0.2.0
