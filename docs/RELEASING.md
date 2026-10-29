@@ -2,7 +2,7 @@
 
 ## Versioning
 
-Rustshot follows [Semantic Versioning](https://semver.org/). There is one version for the whole project, set once in the root `Cargo.toml` under `[workspace.package]`; every crate inherits it with `version.workspace = true`.
+Krustyshot follows [Semantic Versioning](https://semver.org/). There is one version for the whole project, set once in the root `Cargo.toml` under `[workspace.package]`; every crate inherits it with `version.workspace = true`.
 
 While the version is below 1.0:
 
@@ -30,21 +30,21 @@ Every pull request or change that users would notice adds a line under `## [Unre
    scripts/bundle-macos.sh
    ```
    Signing with the project certificate means macOS keeps the Screen Recording permission between test builds. Without the two variables the bundle is ad-hoc signed and you have to grant permission again every time.
-   Quit any running Rustshot, replace `/Applications/Rustshot.app` with `target/release/bundle/Rustshot.app`, and open it **from Finder**. Then check:
+   Quit any running Krustyshot, replace `/Applications/Krustyshot.app` with `target/release/bundle/Krustyshot.app`, and open it **from Finder**. Then check:
    - At most one permission prompt appears at startup.
-   - Without permission, a capture hotkey shows Rustshot's permission window (not a wallpaper-only screenshot). Reset permission, Open System Settings and Quit work.
+   - Without permission, a capture hotkey shows Krustyshot's permission window (not a wallpaper-only screenshot). Reset permission, Open System Settings and Quit work.
    - With permission granted, region, window, full-screen and last-region capture work from both hotkeys and the tray menu, and show your real windows.
    - The overlay covers every display, including the menu bar, with nothing stretched.
    - A region on a Retina display produces the expected pixel size.
    - Each destination works from the quick menu: editor, clipboard, save directly, save as, open in another app (default and a chosen app), print (the dialog appears; cancel is fine), email (a new message with the attachment), Share, copy text (paste the result), and upload (with a test uploader; **Test upload** in Settings → Uploads).
    - Every editor tool, undo and redo, crop, save, and copy (paste into Preview to check).
    - The editor's send menu offers the same destinations, and ⌘P prints.
-   - Settings: record a new shortcut and confirm it works straight away; toggle Open at login; Check for updates. **About Rustshot** in the menu opens Settings → About, and its three buttons open the right GitHub pages.
+   - Settings: record a new shortcut and confirm it works straight away; toggle Open at login; Check for updates. **About Krustyshot** in the menu opens Settings → About, and its three buttons open the right GitHub pages.
    - Record a region, a window and a full display (MP4 and GIF); check Stop, Discard, the shortcut toggle, and that the recording bar isn't in the video. Play the files.
    - Region and window recordings dim the rest of the display with a red outline; clicks pass through; neither appears in the video.
    - Sound: turn the microphone on in Settings (macOS asks for access there), then record with the microphone, with system sound, and with both. Mute and unmute each from the bar icons. Check the sound is there, in sync, and silent while muted. With Show mouse clicks on, clicks appear in the video.
-   - Open Mission Control on the desktop where Rustshot started: windows must look normal size, and no Rustshot window should appear.
-   - Open and close the editor, Settings and notice windows several times, and cancel captures with Esc. Rustshot must not quit, and `~/Library/Logs/DiagnosticReports/` must have no new `rustshot-*.ips` file.
+   - Open Mission Control on the desktop where Krustyshot started: windows must look normal size, and no Krustyshot window should appear.
+   - Open and close the editor, Settings and notice windows several times, and cancel captures with Esc. Krustyshot must not quit, and `~/Library/Logs/DiagnosticReports/` must have no new `krustyshot-*.ips` file.
 3. **Choose the version** using the rules above.
 4. **Update the version** in the root `Cargo.toml`, then run `cargo build` so `Cargo.lock` picks it up.
 5. **Update CHANGELOG.md:**
@@ -53,15 +53,15 @@ Every pull request or change that users would notice adds a line under `## [Unre
 6. **Commit and push** the version bump with the summary `Release vX.Y.Z`. In GitHub Desktop, check the Changes tab lists everything before committing. From a terminal: `git commit -am "Release vX.Y.Z" && git push`.
 7. **Wait for CI to pass on that commit, then tag it** `vX.Y.Z` (with the `v`) and push the tag:
    - GitHub Desktop: History → right-click the commit → Create Tag… → Push origin.
-   - Terminal: `git tag -a vX.Y.Z -m "Rustshot vX.Y.Z" && git push origin vX.Y.Z`.
+   - Terminal: `git tag -a vX.Y.Z -m "Krustyshot vX.Y.Z" && git push origin vX.Y.Z`.
 8. **Review the draft release.** The [release workflow](../.github/workflows/release.yml) checks that the tag matches `Cargo.toml` and that the changelog has an entry, then builds:
-   - `Rustshot-vX.Y.Z-macos-arm64.zip` and `-macos-x86_64.zip` (app bundles)
-   - `Rustshot-vX.Y.Z-windows-x86_64.zip`
-   - `Rustshot-vX.Y.Z-linux-x86_64.tar.gz`
+   - `Krustyshot-vX.Y.Z-macos-arm64.zip` and `-macos-x86_64.zip` (app bundles)
+   - `Krustyshot-vX.Y.Z-windows-x86_64.zip`
+   - `Krustyshot-vX.Y.Z-linux-x86_64.tar.gz`
    - `SHA256SUMS.txt`
 
    It attaches them to a **draft** GitHub release, using the changelog section as the notes.
-9. **Test the downloaded builds before publishing.** Download the macOS zip from the draft, unzip it, replace `/Applications/Rustshot.app`, open it from Finder, and repeat the permission, capture, recording and window open/close checks from step 2. Also try the Windows zip on a real Windows machine, not over Remote Desktop (capture, editor, an MP4 and a GIF recording with sound, the destinations, Settings). Only then click Publish. If anything fails, delete the draft and the tag, fix it, and start again.
+9. **Test the downloaded builds before publishing.** Download the macOS zip from the draft, unzip it, replace `/Applications/Krustyshot.app`, open it from Finder, and repeat the permission, capture, recording and window open/close checks from step 2. Also try the Windows zip on a real Windows machine, not over Remote Desktop (capture, editor, an MP4 and a GIF recording with sound, the destinations, Settings). Only then click Publish. If anything fails, delete the draft and the tag, fix it, and start again.
 
 ## If something goes wrong
 

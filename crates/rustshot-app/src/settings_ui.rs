@@ -15,7 +15,7 @@ use crate::{hotkeys, platform};
 use rustshot_i18n::tr;
 
 /// The project on GitHub.
-const REPO_URL: &str = "https://github.com/moridin1138/rustshot";
+const REPO_URL: &str = "https://github.com/moridin1138/krustyshot";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Section {
@@ -607,7 +607,7 @@ impl SettingsWindow {
 
     fn about(&mut self, ui: &mut Ui, d: &mut Config) {
         group(ui, |ui| {
-            row(ui, &format!("Rustshot {}", env!("CARGO_PKG_VERSION")), Some("PolyForm Shield License 1.0.0"), |ui| {
+            row(ui, &format!("Krustyshot {}", env!("CARGO_PKG_VERSION")), Some("PolyForm Shield License 1.0.0"), |ui| {
                 let checking = matches!(*self.update.lock().unwrap(), UpdateCheck::Checking);
                 if ui.add_enabled(!checking, egui::Button::new(tr!("update-check"))).clicked() {
                     self.start_update_check(ui.ctx().clone());

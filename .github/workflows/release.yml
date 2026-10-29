@@ -75,30 +75,30 @@ jobs:
           scripts/bundle-macos.sh ${{ matrix.target }}
           rm -f "$RUNNER_TEMP/rustshot-signing.p12"
           cd target/${{ matrix.target }}/release/bundle
-          ditto -c -k --keepParent Rustshot.app "$GITHUB_WORKSPACE/Rustshot-${GITHUB_REF_NAME}-${{ matrix.name }}.zip"
+          ditto -c -k --keepParent Krustyshot.app "$GITHUB_WORKSPACE/Krustyshot-${GITHUB_REF_NAME}-${{ matrix.name }}.zip"
       - name: Package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $dir = "Rustshot-$env:GITHUB_REF_NAME-${{ matrix.name }}"
+          $dir = "Krustyshot-$env:GITHUB_REF_NAME-${{ matrix.name }}"
           New-Item -ItemType Directory $dir | Out-Null
-          Copy-Item target/${{ matrix.target }}/release/rustshot.exe $dir/
+          Copy-Item target/${{ matrix.target }}/release/krustyshot.exe $dir/
           Copy-Item README.md, CHANGELOG.md, LICENSE $dir/ -ErrorAction SilentlyContinue
           Compress-Archive $dir "$dir.zip"
       - name: Package (Linux)
         if: runner.os == 'Linux'
         run: |
-          dir="Rustshot-${GITHUB_REF_NAME}-${{ matrix.name }}"
+          dir="Krustyshot-${GITHUB_REF_NAME}-${{ matrix.name }}"
           mkdir "$dir"
-          cp target/${{ matrix.target }}/release/rustshot README.md CHANGELOG.md "$dir"/
+          cp target/${{ matrix.target }}/release/krustyshot README.md CHANGELOG.md "$dir"/
           cp LICENSE "$dir"/ 2>/dev/null || true
           tar czf "$dir.tar.gz" "$dir"
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.name }}
           path: |
-            Rustshot-*.zip
-            Rustshot-*.tar.gz
+            Krustyshot-*.zip
+            Krustyshot-*.tar.gz
 
   release:
     needs: build

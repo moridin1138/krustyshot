@@ -1,6 +1,6 @@
-# Translating Rustshot
+# Translating Krustyshot
 
-Rustshot's interface text lives in [Fluent](https://projectfluent.org/) files, one per language:
+Krustyshot's interface text lives in [Fluent](https://projectfluent.org/) files, one per language:
 
 ```
 crates/rustshot-i18n/locales/en/rustshot.ftl   English (reference)

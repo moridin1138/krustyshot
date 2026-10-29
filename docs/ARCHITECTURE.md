@@ -1,13 +1,13 @@
 # Architecture
 
-Rustshot is a Cargo workspace with four crates plus a maintenance tool. Each crate depends only on the ones above it in this table:
+Krustyshot is a Cargo workspace with four crates plus a maintenance tool. Each crate depends only on the ones above it in this table:
 
 | Crate | Kind | Responsibility |
 |---|---|---|
 | `crates/rustshot-i18n` | library | Interface translations (Fluent files in `locales/`) and the `tr!` macro |
 | `crates/rustshot-core` | library, no UI | Screen capture and recording, geometry, settings, filename patterns, saving and clipboard, sending to other apps, printers and email, text recognition, disk space, mouse pointer, open at login, update check |
 | `crates/rustshot-editor` | library, egui | The annotation editor: document model, undo history, rendering and export |
-| `crates/rustshot-app` | binary `rustshot` | Tray icon, hotkeys, capture overlay, recording bar, Settings, fonts, and wiring everything together |
+| `crates/rustshot-app` | binary `krustyshot` | Tray icon, hotkeys, capture overlay, recording bar, Settings, fonts, and wiring everything together |
 | `xtask` | binary, dev only | `cargo xtask icons` regenerates the app icon |
 
 Every crate uses `rustshot-i18n` for user-facing text (see [TRANSLATING.md](TRANSLATING.md)). `rustshot-editor` does not depend on `rustshot-core`. It receives an image and hands back requests (save, copy, close) for the app to carry out, so it could be reused elsewhere.
@@ -43,7 +43,7 @@ There are three coordinate spaces, and mixing them up is the most likely source 
 
 ## The app shell (`rustshot-app`)
 
-eframe always has a root window. Rustshot keeps it as a 1×1, transparent, click-through window in the top-left corner (`platform::hide_background_window` also hides it from Mission Control and window cycling), and opens everything else as child viewports. It must stay on-screen: an off-screen window makes Mission Control zoom out to fit it. The root can't simply be hidden: eframe stops running the UI of a hidden root, and child windows can only be opened from that UI.
+eframe always has a root window. Krustyshot keeps it as a 1×1, transparent, click-through window in the top-left corner (`platform::hide_background_window` also hides it from Mission Control and window cycling), and opens everything else as child viewports. It must stay on-screen: an off-screen window makes Mission Control zoom out to fit it. The root can't simply be hidden: eframe stops running the UI of a hidden root, and child windows can only be opened from that UI.
 
 On macOS the event loop is set to the Accessory activation policy, so there is no Dock icon or app menu (`platform.rs`). The bundle's `Info.plist` (`crates/rustshot-app/bundle/Info.plist`, filled in by `scripts/bundle-macos.sh`) sets `LSUIElement` for the same effect when launched as an `.app`.
 
@@ -90,7 +90,7 @@ App::deliver(Capture)
 
 Recordings start the same way: `RecordRegion` and `RecordWindow` open the overlay (with recording help text), and the chosen area becomes a display id plus a crop in that display's pixels (`Snapshot::recording_target`); `RecordFullscreen` skips the overlay and records the display under the pointer. `App::start_recording` checks free space first, then starts a `Recording` (below).
 
-The screen is captured before any Rustshot window appears, so the overlay shows a frozen image and never captures itself, the same approach Greenshot uses. On macOS `platform::raise_overlays` lifts the overlay windows above the menu bar and Dock and lets them appear over full-screen apps.
+The screen is captured before any Krustyshot window appears, so the overlay shows a frozen image and never captures itself, the same approach Greenshot uses. On macOS `platform::raise_overlays` lifts the overlay windows above the menu bar and Dock and lets them appear over full-screen apps.
 
 ## The editor (`rustshot-editor`)
 

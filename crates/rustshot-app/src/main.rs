@@ -73,5 +73,5 @@ fn main() -> eframe::Result {
         ..Default::default()
     };
 
-    eframe::run_native("Rustshot", options, Box::new(|cc| Ok(Box::new(app::App::new(cc)))))
+    eframe::run_native("Krustyshot", options, Box::new(|cc| Ok(Box::new(app::App::new(cc)))))
 }

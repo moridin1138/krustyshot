@@ -5,9 +5,9 @@
 
 use anyhow::{Context, Result};
 
-pub const RELEASES_URL: &str = "https://github.com/moridin1138/rustshot/releases";
+pub const RELEASES_URL: &str = "https://github.com/moridin1138/krustyshot/releases";
 // Not `/releases/latest`: that skips pre-releases, and every 0.x release is one.
-const RELEASES_API: &str = "https://api.github.com/repos/moridin1138/rustshot/releases?per_page=30";
+const RELEASES_API: &str = "https://api.github.com/repos/moridin1138/krustyshot/releases?per_page=30";
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum UpdateStatus {
@@ -19,7 +19,7 @@ pub enum UpdateStatus {
 /// background thread.
 pub fn check(current: &str) -> Result<UpdateStatus> {
     let mut response = ureq::get(RELEASES_API)
-        .header("User-Agent", concat!("Rustshot/", env!("CARGO_PKG_VERSION")))
+        .header("User-Agent", concat!("Krustyshot/", env!("CARGO_PKG_VERSION")))
         .header("Accept", "application/vnd.github+json")
         .call()
         .context("contacting GitHub")?;

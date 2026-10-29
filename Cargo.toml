@@ -3,8 +3,8 @@ resolver = "2"
 members = ["crates/rustshot-i18n", "crates/rustshot-core", "crates/rustshot-editor", "crates/rustshot-app", "xtask"]
 
 [workspace.package]
-version = "0.5.1"
-repository = "https://github.com/moridin1138/rustshot"
+version = "0.6.0"
+repository = "https://github.com/moridin1138/krustyshot"
 edition = "2024"
 license = "PolyForm-Shield-1.0.0"
 

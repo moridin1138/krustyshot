@@ -1,4 +1,4 @@
-# Rustshot interface text: German.
+# Krustyshot interface text: German.
 # Machine-drafted translation (not yet reviewed by a native speaker).
 
 ## Capture actions
@@ -14,11 +14,11 @@ record-window = Fenster aufnehmen …
 
 ## Menu-bar / tray menu
 
-menu-about = Über Rustshot
+menu-about = Über Krustyshot
 menu-open-clipboard = Bild aus der Zwischenablage öffnen
 menu-open-file = Bild öffnen …
 menu-open-folder = Ausgabeordner öffnen
-menu-quit = Rustshot beenden
+menu-quit = Krustyshot beenden
 menu-update-available = Update verfügbar: { $version }…
 menu-settings = Einstellungen …
 tray-click-menu = Menü anzeigen
@@ -46,8 +46,8 @@ overlay-record-help-window = Aufnehmen: Auf ein Fenster klicken  ·  Leertaste: 
 
 ## Recording
 
-recording-bar-title = Rustshot-Aufnahme
-recording-frame-title = Rustshot-Aufnahmebereich
+recording-bar-title = Krustyshot-Aufnahme
+recording-frame-title = Krustyshot-Aufnahmebereich
 recording-discard = Verwerfen
 recording-discard-body = Die Aufnahme wird beendet und das Video gelöscht. Das lässt sich nicht widerrufen.
 recording-discard-tip = Aufnahme beenden und verwerfen
@@ -88,14 +88,14 @@ rec-show-clicks-sub = Wo du klickst, erscheint ein Ring, damit Zuschauer folgen 
 rec-system-audio = Systemton
 rec-system-audio-sub = Aufnehmen, was dein Computer abspielt
 rec-system-audio-unavailable = Erfordert macOS 13 oder neuer
-rec-microphone-denied = Der Mikrofonzugriff ist für Rustshot ausgeschaltet
+rec-microphone-denied = Der Mikrofonzugriff ist für Krustyshot ausgeschaltet
 
 ## Disk space
 
 disk-change-folder = Ordner ändern …
 disk-continue = Trotzdem fortfahren
 disk-low-body =
-    Auf dem Volume, auf dem Rustshot Bildschirmfotos und Aufnahmen sichert, sind nur noch { $free } ({ $percent } %) frei:
+    Auf dem Volume, auf dem Krustyshot Bildschirmfotos und Aufnahmen sichert, sind nur noch { $free } ({ $percent } %) frei:
 
     { $folder }
 
@@ -119,7 +119,7 @@ toast-show-finder = Klicken, um sie im Finder zu zeigen
 ## Messages
 
 notice-capture-failed = Aufnahme fehlgeschlagen
-notice-disk-full-body = Das Volume war fast voll. Rustshot hat die Aufnahme deshalb beendet und das Bisherige gesichert. Gib Speicherplatz frei, bevor du erneut aufnimmst.
+notice-disk-full-body = Das Volume war fast voll. Krustyshot hat die Aufnahme deshalb beendet und das Bisherige gesichert. Gib Speicherplatz frei, bevor du erneut aufnimmst.
 notice-disk-full-title = Aufnahme beendet
 notice-hotkeys-body =
     Einige Kurzbefehle konnten nicht registriert werden (vielleicht verwendet eine andere App sie):
@@ -132,23 +132,23 @@ notice-no-clipboard-image = In der Zwischenablage ist kein Bild.
 notice-open-image = Bild öffnen
 notice-recording-failed = Aufnahme fehlgeschlagen
 notice-no-microphone-title = Aufnahme ohne Mikrofon
-notice-no-microphone-body = Rustshot hat noch keinen Mikrofonzugriff. Schalte Mikrofon unter Einstellungen → Aufnahme aus und wieder ein, um gefragt zu werden, oder erlaube es unter Systemeinstellungen → Datenschutz & Sicherheit → Mikrofon.
+notice-no-microphone-body = Krustyshot hat noch keinen Mikrofonzugriff. Schalte Mikrofon unter Einstellungen → Aufnahme aus und wieder ein, um gefragt zu werden, oder erlaube es unter Systemeinstellungen → Datenschutz & Sicherheit → Mikrofon.
 
 ## Screen Recording permission (macOS)
 
 permission-body =
-    Rustshot braucht die Berechtigung „Bildschirmaufnahme“, um andere Apps aufzunehmen. Ohne sie erlaubt macOS nur, den Schreibtischhintergrund aufzunehmen.
+    Krustyshot braucht die Berechtigung „Bildschirmaufnahme“, um andere Apps aufzunehmen. Ohne sie erlaubt macOS nur, den Schreibtischhintergrund aufzunehmen.
 
     1. Klicke auf „Systemeinstellungen öffnen“.
-    2. Aktiviere Rustshot unter „Datenschutz & Sicherheit“ > „Bildschirmaufnahme“.
-    3. Klicke auf „Rustshot beenden“ und öffne Rustshot erneut.
+    2. Aktiviere Krustyshot unter „Datenschutz & Sicherheit“ > „Bildschirmaufnahme“.
+    3. Klicke auf „Krustyshot beenden“ und öffne Krustyshot erneut.
 
-    Ist Rustshot schon aktiviert, aber die Aufnahmen zeigen trotzdem keine Fenster? Klicke auf „Berechtigung zurücksetzen“ und beantworte die Anfrage von macOS.
+    Ist Krustyshot schon aktiviert, aber die Aufnahmen zeigen trotzdem keine Fenster? Klicke auf „Berechtigung zurücksetzen“ und beantworte die Anfrage von macOS.
 
-    Startest du Rustshot aus einem Terminal? Gib die Berechtigung stattdessen deiner Terminal-App.
+    Startest du Krustyshot aus einem Terminal? Gib die Berechtigung stattdessen deiner Terminal-App.
 permission-open-settings = Systemeinstellungen öffnen
 permission-reset = Berechtigung zurücksetzen
-permission-reset-tip = Den alten Bildschirmaufnahme-Eintrag von Rustshot entfernen und erneut fragen
+permission-reset-tip = Den alten Bildschirmaufnahme-Eintrag von Krustyshot entfernen und erneut fragen
 permission-title = Berechtigung „Bildschirmaufnahme“ erforderlich
 
 ## About
@@ -284,7 +284,7 @@ settings-file-name = Dateiname
 settings-folder = Ordner
 settings-format = Format
 settings-free-space = Freier Speicher
-settings-free-space-low = Dieses Volume ist fast voll. Rustshot warnt vor dem Aufnehmen; wähle am besten einen Ordner auf einem anderen Volume.
+settings-free-space-low = Dieses Volume ist fast voll. Krustyshot warnt vor dem Aufnehmen; wähle am besten einen Ordner auf einem anderen Volume.
 settings-free-space-value = { $free } von { $total } ({ $percent } %)
 settings-general = Allgemein
 settings-icon-click = Klick auf das Symbol
@@ -306,7 +306,7 @@ settings-right-click-hint = Klicke mit der rechten Maustaste auf das Symbol, um 
 settings-saving = Sichern
 settings-seconds = { $n } s
 settings-shortcuts = Kurzbefehle
-settings-title = Rustshot-Einstellungen
+settings-title = Krustyshot-Einstellungen
 settings-tray-icon = Symbol im Infobereich
 token-date = Datum
 token-time = Uhrzeit
@@ -331,8 +331,8 @@ update-available = Version { $version } ist verfügbar.
 update-check = Nach Updates suchen
 update-checking = GitHub wird geprüft …
 update-download = Laden
-update-notice-title = Rustshot-Update verfügbar
-update-notice-body = Rustshot { $version } ist erschienen. Du hast { $current }.
+update-notice-title = Krustyshot-Update verfügbar
+update-notice-body = Krustyshot { $version } ist erschienen. Du hast { $current }.
 update-failed = Nach Updates suchen fehlgeschlagen: { $error }
 update-latest = Du hast die neueste Version.
 
@@ -356,7 +356,7 @@ upload-link = Link in der Antwort
 upload-link-sub = z. B. $json:data.link$; leer lassen, wenn die Antwort der Link ist
 upload-headers = Header (zum Beispiel ein API-Schlüssel)
 upload-form = Zusätzliche Formularfelder
-upload-secrets-note = Header-Werte wie API-Schlüssel werden in der Einstellungsdatei von Rustshot auf diesem Computer gespeichert.
+upload-secrets-note = Header-Werte wie API-Schlüssel werden in der Einstellungsdatei von Krustyshot auf diesem Computer gespeichert.
 upload-test = Upload testen
 upload-not-ready = Gib einen Namen und eine Adresse mit https:// an, um den Uploader zu nutzen.
 upload-remove = Entfernen
@@ -367,11 +367,11 @@ capture-scrolling = Scrollenden Bereich aufnehmen…
 title-scrolling = Scrollende Aufnahme
 overlay-scroll-help-region = Scrollende Aufnahme: ziehe nur über den Teil, der scrollt, etwa die Seite oder das Dokument  ·  Leertaste: Fenstermodus  ·  Esc: abbrechen
 overlay-scroll-help-window = Scrollende Aufnahme: klicke auf das Fenster, das gescrollt werden soll  ·  Leertaste: Bereichsmodus  ·  Esc: abbrechen
-scroll-bar-title = Rustshot scrollende Aufnahme
+scroll-bar-title = Krustyshot scrollende Aufnahme
 scroll-progress = Scrollen… { $pixels } px
 scroll-hint = Klicke irgendwo, um anzuhalten
 scroll-stop = Anhalten
-scroll-needs-accessibility = Die scrollende Aufnahme braucht Bedienungshilfen: erlaube Rustshot in den Systemeinstellungen und versuche es erneut
+scroll-needs-accessibility = Die scrollende Aufnahme braucht Bedienungshilfen: erlaube Krustyshot in den Systemeinstellungen und versuche es erneut
 scroll-unsupported = Die scrollende Aufnahme braucht eine X11-Sitzung. Wayland erlaubt Apps nicht, andere Fenster zu scrollen.
 scroll-limit = Bei der Höchstgröße von 25.000 Pixeln angehalten
 scroll-lost = Die Seite hat sich beim Scrollen verändert, daher wurde die Aufnahme früher beendet

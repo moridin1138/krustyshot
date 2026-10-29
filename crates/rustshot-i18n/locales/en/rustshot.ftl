@@ -1,4 +1,4 @@
-# Rustshot interface text: English (the reference language).
+# Krustyshot interface text: English (the reference language).
 # Every other language file must define exactly these messages.
 
 ## Capture actions
@@ -14,11 +14,11 @@ record-window = Record window…
 
 ## Menu-bar / tray menu
 
-menu-about = About Rustshot
+menu-about = About Krustyshot
 menu-open-clipboard = Open image from clipboard
 menu-open-file = Open image from file…
 menu-open-folder = Open output folder
-menu-quit = Quit Rustshot
+menu-quit = Quit Krustyshot
 menu-update-available = Update available: { $version }…
 menu-settings = Settings…
 tray-click-menu = Show the menu
@@ -46,8 +46,8 @@ overlay-record-help-window = Record: click a window  ·  Space: region mode  · 
 
 ## Recording
 
-recording-bar-title = Rustshot Recording
-recording-frame-title = Rustshot recording area
+recording-bar-title = Krustyshot Recording
+recording-frame-title = Krustyshot recording area
 recording-discard = Discard
 recording-discard-body = The recording will stop and the video will be deleted. This can't be undone.
 recording-discard-tip = Stop and discard this recording
@@ -88,14 +88,14 @@ rec-show-clicks-sub = A ring appears where you click, so viewers can follow alon
 rec-system-audio = System sound
 rec-system-audio-sub = Record what your computer plays
 rec-system-audio-unavailable = Needs macOS 13 or later
-rec-microphone-denied = Microphone access is off for Rustshot
+rec-microphone-denied = Microphone access is off for Krustyshot
 
 ## Disk space
 
 disk-change-folder = Change folder…
 disk-continue = Continue anyway
 disk-low-body =
-    Only { $free } ({ $percent }%) is free on the disk where Rustshot saves screenshots and recordings:
+    Only { $free } ({ $percent }%) is free on the disk where Krustyshot saves screenshots and recordings:
 
     { $folder }
 
@@ -119,7 +119,7 @@ toast-show-finder = Click to show in Finder
 ## Messages
 
 notice-capture-failed = Capture failed
-notice-disk-full-body = The disk was almost full, so Rustshot stopped recording and saved what it had. Free up space before recording again.
+notice-disk-full-body = The disk was almost full, so Krustyshot stopped recording and saved what it had. Free up space before recording again.
 notice-disk-full-title = Recording stopped
 notice-hotkeys-body =
     Some shortcuts could not be registered (another app may be using them):
@@ -132,23 +132,23 @@ notice-no-clipboard-image = There is no image on the clipboard.
 notice-open-image = Open image
 notice-recording-failed = Recording failed
 notice-no-microphone-title = Recording without the microphone
-notice-no-microphone-body = Rustshot doesn't have microphone access yet. Turn the Microphone switch off and on in Settings → Recording to be asked, or allow it in System Settings → Privacy & Security → Microphone.
+notice-no-microphone-body = Krustyshot doesn't have microphone access yet. Turn the Microphone switch off and on in Settings → Recording to be asked, or allow it in System Settings → Privacy & Security → Microphone.
 
 ## Screen Recording permission (macOS)
 
 permission-body =
-    Rustshot needs Screen Recording permission to capture other apps. Without it, macOS only lets it capture the desktop background.
+    Krustyshot needs Screen Recording permission to capture other apps. Without it, macOS only lets it capture the desktop background.
 
     1. Click Open System Settings.
-    2. Under Privacy & Security > Screen Recording, turn on Rustshot.
-    3. Click Quit Rustshot, then open Rustshot again.
+    2. Under Privacy & Security > Screen Recording, turn on Krustyshot.
+    3. Click Quit Krustyshot, then open Krustyshot again.
 
-    Is Rustshot already turned on but captures still show no windows? Click Reset permission and answer the macOS prompt.
+    Is Krustyshot already turned on but captures still show no windows? Click Reset permission and answer the macOS prompt.
 
-    Running Rustshot from a terminal? Give the permission to your terminal app instead.
+    Running Krustyshot from a terminal? Give the permission to your terminal app instead.
 permission-open-settings = Open System Settings
 permission-reset = Reset permission
-permission-reset-tip = Remove Rustshot's old Screen Recording entry and ask again
+permission-reset-tip = Remove Krustyshot's old Screen Recording entry and ask again
 permission-title = Screen Recording permission needed
 
 ## About
@@ -284,7 +284,7 @@ settings-file-name = File name
 settings-folder = Folder
 settings-format = Format
 settings-free-space = Free space
-settings-free-space-low = This disk is nearly full. Rustshot will warn before capturing; consider a folder on another disk.
+settings-free-space-low = This disk is nearly full. Krustyshot will warn before capturing; consider a folder on another disk.
 settings-free-space-value = { $free } of { $total } ({ $percent }%)
 settings-general = General
 settings-icon-click = Clicking the icon
@@ -306,7 +306,7 @@ settings-right-click-hint = Right-click the icon for the menu.
 settings-saving = Saving
 settings-seconds = { $n } s
 settings-shortcuts = Shortcuts
-settings-title = Rustshot Settings
+settings-title = Krustyshot Settings
 settings-tray-icon = Tray icon
 token-date = date
 token-time = time
@@ -331,8 +331,8 @@ update-available = Version { $version } is available.
 update-check = Check for updates
 update-checking = Checking GitHub…
 update-download = Download
-update-notice-title = Rustshot update available
-update-notice-body = Rustshot { $version } is out. You have { $current }.
+update-notice-title = Krustyshot update available
+update-notice-body = Krustyshot { $version } is out. You have { $current }.
 update-failed = Couldn't check for updates: { $error }
 update-latest = You have the latest version.
 
@@ -356,7 +356,7 @@ upload-link = Link in the reply
 upload-link-sub = e.g. $json:data.link$; leave empty if the reply is the link
 upload-headers = Headers (for example an API key)
 upload-form = Extra form fields
-upload-secrets-note = Header values, such as API keys, are saved in Rustshot's settings file on this computer.
+upload-secrets-note = Header values, such as API keys, are saved in Krustyshot's settings file on this computer.
 upload-test = Test upload
 upload-not-ready = Add a name and an address starting with https:// to use the uploader.
 upload-remove = Remove
@@ -367,11 +367,11 @@ capture-scrolling = Capture scrolling region…
 title-scrolling = Scrolling capture
 overlay-scroll-help-region = Scrolling capture: drag over just the part that scrolls, such as the page or document  ·  Space: window mode  ·  Esc: cancel
 overlay-scroll-help-window = Scrolling capture: click the window to scroll  ·  Space: region mode  ·  Esc: cancel
-scroll-bar-title = Rustshot scrolling capture
+scroll-bar-title = Krustyshot scrolling capture
 scroll-progress = Scrolling… { $pixels } px
 scroll-hint = Click anywhere to stop
 scroll-stop = Stop
-scroll-needs-accessibility = Scrolling capture needs Accessibility: allow Rustshot in System Settings, then try again
+scroll-needs-accessibility = Scrolling capture needs Accessibility: allow Krustyshot in System Settings, then try again
 scroll-unsupported = Scrolling capture needs an X11 session. Wayland doesn't let apps scroll other windows.
 scroll-limit = Stopped at the size limit of 25,000 pixels
 scroll-lost = The page changed while scrolling, so the capture stopped early

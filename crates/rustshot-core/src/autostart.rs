@@ -12,7 +12,7 @@ use anyhow::{Context, Result};
 const LABEL: &str = "org.rustshot.Rustshot";
 
 fn exe() -> Result<PathBuf> {
-    std::env::current_exe().context("finding Rustshot's executable")
+    std::env::current_exe().context("finding Krustyshot's executable")
 }
 
 #[cfg(target_os = "macos")]
@@ -37,6 +37,42 @@ pub fn is_enabled() -> bool {
     {
         desktop_path().is_some_and(|p| p.exists())
     }
+}
+
+/// The login entry as stored (plist, registry query output or desktop file),
+/// to see which executable it starts.
+fn recorded() -> Option<String> {
+    #[cfg(target_os = "macos")]
+    {
+        std::fs::read_to_string(agent_path()?).ok()
+    }
+    #[cfg(windows)]
+    {
+        let out = std::process::Command::new("reg")
+            .args(["query", r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run", "/v", "Rustshot"])
+            .output()
+            .ok()?;
+        out.status.success().then(|| String::from_utf8_lossy(&out.stdout).into_owned())
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        std::fs::read_to_string(desktop_path()?).ok()
+    }
+}
+
+/// If "open at login" is on but starts another copy (such as the
+/// `rustshot` executable from before the rename to Krustyshot), point it at
+/// this one. Development builds (inside a `target` folder) leave it alone.
+pub fn refresh() -> Result<()> {
+    let exe = exe()?;
+    if !is_enabled() || exe.components().any(|c| c.as_os_str() == "target") {
+        return Ok(());
+    }
+    if recorded().is_some_and(|r| !r.contains(&exe.display().to_string())) {
+        log::info!("open at login: now starts {}", exe.display());
+        set_enabled(true)?;
+    }
+    Ok(())
 }
 
 #[cfg(all(unix, not(target_os = "macos")))]
@@ -103,7 +139,7 @@ pub fn set_enabled(on: bool) -> Result<()> {
                 std::fs::create_dir_all(dir)?;
             }
             let entry = format!(
-                "[Desktop Entry]\nType=Application\nName=Rustshot\nExec=\"{}\"\nX-GNOME-Autostart-enabled=true\n",
+                "[Desktop Entry]\nType=Application\nName=Krustyshot\nExec=\"{}\"\nX-GNOME-Autostart-enabled=true\n",
                 exe.display()
             );
             std::fs::write(&path, entry)?;

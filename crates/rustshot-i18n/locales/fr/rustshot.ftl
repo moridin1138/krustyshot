@@ -1,4 +1,4 @@
-# Rustshot interface text: French.
+# Krustyshot interface text: French.
 # Machine-drafted translation (not yet reviewed by a native speaker).
 
 ## Capture actions
@@ -14,11 +14,11 @@ record-window = Enregistrer une fenêtre…
 
 ## Menu-bar / tray menu
 
-menu-about = À propos de Rustshot
+menu-about = À propos de Krustyshot
 menu-open-clipboard = Ouvrir l'image du presse-papiers
 menu-open-file = Ouvrir une image…
 menu-open-folder = Ouvrir le dossier de sortie
-menu-quit = Quitter Rustshot
+menu-quit = Quitter Krustyshot
 menu-update-available = Mise à jour disponible : { $version }…
 menu-settings = Réglages…
 tray-click-menu = Afficher le menu
@@ -46,8 +46,8 @@ overlay-record-help-window = Enregistrer : cliquez sur une fenêtre  ·  Espace 
 
 ## Recording
 
-recording-bar-title = Enregistrement Rustshot
-recording-frame-title = Zone d'enregistrement Rustshot
+recording-bar-title = Enregistrement Krustyshot
+recording-frame-title = Zone d'enregistrement Krustyshot
 recording-discard = Supprimer
 recording-discard-body = L'enregistrement va s'arrêter et la vidéo sera supprimée. Cette action est irréversible.
 recording-discard-tip = Arrêter et supprimer cet enregistrement
@@ -88,14 +88,14 @@ rec-show-clicks-sub = Un cercle apparaît là où vous cliquez, pour que le publ
 rec-system-audio = Son du système
 rec-system-audio-sub = Enregistrer ce que joue votre ordinateur
 rec-system-audio-unavailable = Nécessite macOS 13 ou plus récent
-rec-microphone-denied = L'accès au microphone est désactivé pour Rustshot
+rec-microphone-denied = L'accès au microphone est désactivé pour Krustyshot
 
 ## Disk space
 
 disk-change-folder = Changer de dossier…
 disk-continue = Continuer quand même
 disk-low-body =
-    Il ne reste que { $free } ({ $percent } %) d'espace libre sur le disque où Rustshot enregistre les captures et les enregistrements :
+    Il ne reste que { $free } ({ $percent } %) d'espace libre sur le disque où Krustyshot enregistre les captures et les enregistrements :
 
     { $folder }
 
@@ -119,7 +119,7 @@ toast-show-finder = Cliquez pour afficher dans le Finder
 ## Messages
 
 notice-capture-failed = Échec de la capture
-notice-disk-full-body = Le disque était presque plein : Rustshot a arrêté l'enregistrement et a conservé ce qui avait été enregistré. Libérez de l'espace avant d'enregistrer à nouveau.
+notice-disk-full-body = Le disque était presque plein : Krustyshot a arrêté l'enregistrement et a conservé ce qui avait été enregistré. Libérez de l'espace avant d'enregistrer à nouveau.
 notice-disk-full-title = Enregistrement arrêté
 notice-hotkeys-body =
     Certains raccourcis n'ont pas pu être enregistrés (une autre app les utilise peut-être) :
@@ -132,23 +132,23 @@ notice-no-clipboard-image = Le presse-papiers ne contient aucune image.
 notice-open-image = Ouvrir une image
 notice-recording-failed = Échec de l'enregistrement
 notice-no-microphone-title = Enregistrement sans le microphone
-notice-no-microphone-body = Rustshot n'a pas encore accès au microphone. Désactivez puis réactivez l'option Microphone dans Réglages → Enregistrement pour que la demande s'affiche, ou autorisez-le dans Réglages Système → Confidentialité et sécurité → Microphone.
+notice-no-microphone-body = Krustyshot n'a pas encore accès au microphone. Désactivez puis réactivez l'option Microphone dans Réglages → Enregistrement pour que la demande s'affiche, ou autorisez-le dans Réglages Système → Confidentialité et sécurité → Microphone.
 
 ## Screen Recording permission (macOS)
 
 permission-body =
-    Rustshot a besoin de l'autorisation Enregistrement de l'écran pour capturer les autres apps. Sans elle, macOS ne lui laisse capturer que le fond d'écran.
+    Krustyshot a besoin de l'autorisation Enregistrement de l'écran pour capturer les autres apps. Sans elle, macOS ne lui laisse capturer que le fond d'écran.
 
     1. Cliquez sur Ouvrir Réglages Système.
-    2. Dans Confidentialité et sécurité > Enregistrement de l'écran, activez Rustshot.
-    3. Cliquez sur Quitter Rustshot, puis rouvrez Rustshot.
+    2. Dans Confidentialité et sécurité > Enregistrement de l'écran, activez Krustyshot.
+    3. Cliquez sur Quitter Krustyshot, puis rouvrez Krustyshot.
 
-    Rustshot est déjà activé mais les captures ne montrent toujours aucune fenêtre ? Cliquez sur Réinitialiser l'autorisation et répondez à la demande de macOS.
+    Krustyshot est déjà activé mais les captures ne montrent toujours aucune fenêtre ? Cliquez sur Réinitialiser l'autorisation et répondez à la demande de macOS.
 
-    Vous lancez Rustshot depuis un terminal ? Donnez plutôt l'autorisation à votre app de terminal.
+    Vous lancez Krustyshot depuis un terminal ? Donnez plutôt l'autorisation à votre app de terminal.
 permission-open-settings = Ouvrir Réglages Système
 permission-reset = Réinitialiser l'autorisation
-permission-reset-tip = Supprimer l'ancienne autorisation d'enregistrement de l'écran de Rustshot et la redemander
+permission-reset-tip = Supprimer l'ancienne autorisation d'enregistrement de l'écran de Krustyshot et la redemander
 permission-title = Autorisation d'enregistrement de l'écran requise
 
 ## About
@@ -284,7 +284,7 @@ settings-file-name = Nom du fichier
 settings-folder = Dossier
 settings-format = Format
 settings-free-space = Espace libre
-settings-free-space-low = Ce disque est presque plein. Rustshot vous avertira avant chaque capture ; pensez à choisir un dossier sur un autre disque.
+settings-free-space-low = Ce disque est presque plein. Krustyshot vous avertira avant chaque capture ; pensez à choisir un dossier sur un autre disque.
 settings-free-space-value = { $free } sur { $total } ({ $percent } %)
 settings-general = Général
 settings-icon-click = Clic sur l'icône
@@ -306,7 +306,7 @@ settings-right-click-hint = Faites un clic droit sur l'icône pour le menu.
 settings-saving = Enregistrement
 settings-seconds = { $n } s
 settings-shortcuts = Raccourcis
-settings-title = Réglages de Rustshot
+settings-title = Réglages de Krustyshot
 settings-tray-icon = Icône de la zone de notification
 token-date = date
 token-time = heure
@@ -331,8 +331,8 @@ update-available = La version { $version } est disponible.
 update-check = Rechercher des mises à jour
 update-checking = Vérification sur GitHub…
 update-download = Télécharger
-update-notice-title = Mise à jour de Rustshot disponible
-update-notice-body = Rustshot { $version } est disponible. Vous avez la version { $current }.
+update-notice-title = Mise à jour de Krustyshot disponible
+update-notice-body = Krustyshot { $version } est disponible. Vous avez la version { $current }.
 update-failed = Impossible de vérifier les mises à jour : { $error }
 update-latest = Vous avez la dernière version.
 
@@ -356,7 +356,7 @@ upload-link = Lien dans la réponse
 upload-link-sub = p. ex. $json:data.link$ ; laissez vide si la réponse est le lien
 upload-headers = En-têtes (par exemple une clé d'API)
 upload-form = Champs de formulaire supplémentaires
-upload-secrets-note = Les valeurs des en-têtes, comme les clés d'API, sont enregistrées dans le fichier de réglages de Rustshot sur cet ordinateur.
+upload-secrets-note = Les valeurs des en-têtes, comme les clés d'API, sont enregistrées dans le fichier de réglages de Krustyshot sur cet ordinateur.
 upload-test = Tester l'envoi
 upload-not-ready = Indiquez un nom et une adresse commençant par https:// pour utiliser l'envoi.
 upload-remove = Supprimer
@@ -367,11 +367,11 @@ capture-scrolling = Capturer une zone défilante…
 title-scrolling = Capture défilante
 overlay-scroll-help-region = Capture défilante : faites glisser sur la seule partie qui défile, comme la page ou le document  ·  Espace : mode fenêtre  ·  Échap : annuler
 overlay-scroll-help-window = Capture défilante : cliquez sur la fenêtre à faire défiler  ·  Espace : mode zone  ·  Échap : annuler
-scroll-bar-title = Capture défilante Rustshot
+scroll-bar-title = Capture défilante Krustyshot
 scroll-progress = Défilement… { $pixels } px
 scroll-hint = Cliquez n'importe où pour arrêter
 scroll-stop = Arrêter
-scroll-needs-accessibility = La capture défilante nécessite l'accès Accessibilité : autorisez Rustshot dans Réglages Système, puis réessayez
+scroll-needs-accessibility = La capture défilante nécessite l'accès Accessibilité : autorisez Krustyshot dans Réglages Système, puis réessayez
 scroll-unsupported = La capture défilante nécessite une session X11. Wayland ne permet pas aux apps de faire défiler d'autres fenêtres.
 scroll-limit = Arrêtée à la taille maximale de 25 000 pixels
 scroll-lost = La page a changé pendant le défilement, la capture s'est donc arrêtée plus tôt

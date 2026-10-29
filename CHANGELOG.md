@@ -1,10 +1,18 @@
 # Changelog
 
-All notable changes to Rustshot are recorded here.
+All notable changes to Krustyshot are recorded here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html). See [docs/RELEASING.md](docs/RELEASING.md) for how versions are chosen.
 
 ## [Unreleased]
+
+## [0.6.0] - 2026-10-29
+
+Rustshot is now **Krustyshot**.
+
+### Changed
+
+- New name: Rustshot is now Krustyshot, because another screenshot app is called Rustshot. The app, its menus, the downloads (`Krustyshot.app`, `krustyshot.exe`) and the GitHub address (github.com/moridin1138/krustyshot) use the new name; the old address redirects. Settings, shortcuts and macOS permissions carry over. Delete the old Rustshot app after installing; Open at login switches to Krustyshot the first time it runs.
 
 ## [0.5.1] - 2026-10-29
 
@@ -12,21 +20,21 @@ Sound in recordings, scrolling screenshots, and more places to send captures: ot
 
 ### Added
 
-- **Sound in MP4 recordings:** the microphone (with a choice of device) and system sound, each turned on separately in Settings → Recording and mixed into one track. System sound needs macOS 13 or later; on Windows it records what the default speakers or headphones play. Both are off by default. While recording, the bar shows a microphone and a speaker icon that blink with the red dot; click one to mute or unmute that source. On macOS, Rustshot asks for microphone access when you turn the microphone on in Settings.
+- **Sound in MP4 recordings:** the microphone (with a choice of device) and system sound, each turned on separately in Settings → Recording and mixed into one track. System sound needs macOS 13 or later; on Windows it records what the default speakers or headphones play. Both are off by default. While recording, the bar shows a microphone and a speaker icon that blink with the red dot; click one to mute or unmute that source. On macOS, Krustyshot asks for microphone access when you turn the microphone on in Settings.
 - **Show mouse clicks** (Settings → Recording): a dot while the button is held and a fading ring where you click.
 - While recording a region or a window, the rest of the display is dimmed and a thin red line marks the recorded area. Clicks go straight through, and none of it appears in the recording.
 - MP4 recording on Windows, using Windows' own H.264 encoder (Media Foundation), with the same quality, resolution and frame-rate settings as on macOS.
 - On Windows 10 (version 2004) and later, the recording bar is hidden from the recording, as on macOS.
 - New destinations, in the quick menu, the after-capture settings and the editor's new send menu: **Open in another app** (the default image app, or one chosen in Settings), **Print** (⌘P / Ctrl+P in the editor), **Email** (a new message with the image attached), **Share** on macOS (AirDrop, Messages, Notes and more) and **Copy text**, which recognises the text in the image (Vision on macOS, Windows' built-in OCR, Tesseract on Linux) and copies it.
 - **Custom uploader** (Settings → Uploads): send captures to your own server or an image host and copy the link it returns. Set the address, POST or PUT, a form field or the raw file, headers (such as an API key), extra form fields, and where the link is in the reply (`$json:data.link$`). ShareX uploader files (`.sxcu`) can be imported, and **Test upload** checks the settings. Once set up, "Upload to …" appears in the quick menu, the after-capture settings and the editor.
-- Automatic update check (Settings → General, on by default): shortly after start-up and once a day Rustshot asks GitHub for the latest version number. A new version is announced once with a Download button, and the menu-bar menu offers it until you update.
+- Automatic update check (Settings → General, on by default): shortly after start-up and once a day Krustyshot asks GitHub for the latest version number. A new version is announced once with a Download button, and the menu-bar menu offers it until you update.
 - Settings → About has **View on GitHub**, **Release notes** and **Report a problem** buttons right under the version.
-- **Capture scrolling region** (menu, or ⌥⇧S on macOS and Ctrl+Alt+Print Screen elsewhere): drag over something taller than the screen, such as a web page or document, and Rustshot scrolls it for you and joins the screenshots into one tall image. It stops at the bottom, when you click, or at 25,000 pixels. Fixed headers and footers appear once. The image goes to your after-capture destinations like any screenshot. On macOS it needs the Accessibility permission, which it asks for the first time; on Linux it needs X11.
-- Rustshot keeps a log file (Settings → About → Log file; `~/Library/Logs/Rustshot/` on macOS), with the previous run's log kept alongside, to help when reporting a problem.
+- **Capture scrolling region** (menu, or ⌥⇧S on macOS and Ctrl+Alt+Print Screen elsewhere): drag over something taller than the screen, such as a web page or document, and Krustyshot scrolls it for you and joins the screenshots into one tall image. It stops at the bottom, when you click, or at 25,000 pixels. Fixed headers and footers appear once. The image goes to your after-capture destinations like any screenshot. On macOS it needs the Accessibility permission, which it asks for the first time; on Linux it needs X11.
+- Krustyshot keeps a log file (Settings → About → Log file; `~/Library/Logs/Rustshot/` on macOS), with the previous run's log kept alongside, to help when reporting a problem.
 
 ### Changed
 
-- **About Rustshot** in the menu-bar menu opens Settings → About instead of a separate window.
+- **About Krustyshot** in the menu-bar menu opens Settings → About instead of a separate window.
 - The recording bar keeps every item in a fixed place, so the timer, size and icons don't shift as they change.
 - Releases are published as the latest release rather than as pre-releases; only versions with a suffix such as `-beta.1` are pre-releases.
 
@@ -43,8 +51,8 @@ Screen recording.
 - Screen recording from the menu, matching the screenshot options: **Record region…** (drag an area), **Record window…** (click a window) and **Record full screen** (the display the pointer is on). The record shortcut (⌥⇧V on macOS, Ctrl+Shift+Print Screen elsewhere) starts a region recording or stops the current one. A small bar shows the time and size so far, with Stop and Discard (Discard asks for confirmation, since the video is deleted). On macOS the bar is hidden from the recording, and the menu-bar icon turns red while recording.
 - MP4 recordings on macOS (the system's own H.264 encoder) and GIF recordings on every platform. GIFs store only what changed between frames, so screen recordings stay small.
 - Recording settings: format, quality (Low, Medium, High), full or half resolution on Retina displays, frame rate, and an estimate of the size per minute.
-- Low disk space warning: when the disk holding your screenshots folder has 5% or less free, Rustshot warns before recording (and before screenshots, at most every 30 minutes), with options to continue, choose another folder, or cancel. Settings > Saving shows the free space.
-- A recording in progress stops and keeps what it has if the disk gets critically low (under 1% or 512 MB), and quitting Rustshot saves an active recording first.
+- Low disk space warning: when the disk holding your screenshots folder has 5% or less free, Krustyshot warns before recording (and before screenshots, at most every 30 minutes), with options to continue, choose another folder, or cancel. Settings > Saving shows the free space.
+- A recording in progress stops and keeps what it has if the disk gets critically low (under 1% or 512 MB), and quitting Krustyshot saves an active recording first.
 
 ## [0.3.0] - 2026-10-14
 
@@ -90,18 +98,18 @@ Phase 2: Greenshot editor parity.
 
 ### Fixed
 
-- macOS: captures no longer silently show only the desktop background when Rustshot lacks Screen Recording permission. Rustshot now explains how to grant it, with buttons to open System Settings, reset a stale permission entry, and quit so it can be reopened.
-- macOS: only one permission prompt appears at startup, instead of Apple's prompt and Rustshot's window competing.
-- macOS: fixed a crash after a few minutes to an hour of use, caused by an error inside AppKit's Touch Bar support (even on Macs without a Touch Bar). Rustshot now catches that error instead of quitting.
+- macOS: captures no longer silently show only the desktop background when Krustyshot lacks Screen Recording permission. Krustyshot now explains how to grant it, with buttons to open System Settings, reset a stale permission entry, and quit so it can be reopened.
+- macOS: only one permission prompt appears at startup, instead of Apple's prompt and Krustyshot's window competing.
+- macOS: fixed a crash after a few minutes to an hour of use, caused by an error inside AppKit's Touch Bar support (even on Macs without a Touch Bar). Krustyshot now catches that error instead of quitting.
 - The capture overlay could take a screenshot by itself if a mouse button was released just after it opened. A capture now needs a click or drag that starts inside the overlay.
-- macOS: Mission Control no longer zooms all the way out on the desktop where Rustshot is running. Rustshot's hidden background window is now kept on-screen and excluded from Mission Control.
-- Esc now closes Rustshot's message windows.
+- macOS: Mission Control no longer zooms all the way out on the desktop where Krustyshot is running. Krustyshot's hidden background window is now kept on-screen and excluded from Mission Control.
+- Esc now closes Krustyshot's message windows.
 - Shortcut hints in tooltips showed empty boxes for the ⇧ and ⌥ symbols. They now read, for example, "Cmd+Shift+S" on macOS and "Ctrl+Shift+S" elsewhere.
 
 ### Changed
 
-- macOS builds are signed with Rustshot's own certificate, so macOS keeps the Screen Recording permission when you update. You'll need to grant it once more for 0.1.1. Builds are still not notarised by Apple, so the first launch needs right-click and Open.
-- Licence changed from GPL-3.0-or-later to the [PolyForm Shield License 1.0.0](LICENSE): free for any use, including commercial, except providing a product that competes with Rustshot (such as reselling it). Version 0.1.0 remains available under GPL-3.0-or-later.
+- macOS builds are signed with Krustyshot's own certificate, so macOS keeps the Screen Recording permission when you update. You'll need to grant it once more for 0.1.1. Builds are still not notarised by Apple, so the first launch needs right-click and Open.
+- Licence changed from GPL-3.0-or-later to the [PolyForm Shield License 1.0.0](LICENSE): free for any use, including commercial, except providing a product that competes with Krustyshot (such as reselling it). Version 0.1.0 remains available under GPL-3.0-or-later.
 
 ## [0.1.0] - 2026-10-13
 
@@ -122,10 +130,11 @@ First release, licensed under GPL-3.0-or-later.
 - App icon, `cargo xtask icons` to regenerate it, and macOS bundle metadata.
 - CI on macOS, Windows and Linux, and a tag-driven release workflow.
 
-[Unreleased]: https://github.com/moridin1138/rustshot/compare/v0.5.1...HEAD
-[0.5.1]: https://github.com/moridin1138/rustshot/compare/v0.4.0...v0.5.1
-[0.4.0]: https://github.com/moridin1138/rustshot/compare/v0.3.0...v0.4.0
-[0.3.0]: https://github.com/moridin1138/rustshot/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/moridin1138/rustshot/compare/v0.1.1...v0.2.0
-[0.1.1]: https://github.com/moridin1138/rustshot/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/moridin1138/rustshot/releases/tag/v0.1.0
+[Unreleased]: https://github.com/moridin1138/krustyshot/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/moridin1138/krustyshot/compare/v0.5.1...v0.6.0
+[0.5.1]: https://github.com/moridin1138/krustyshot/compare/v0.4.0...v0.5.1
+[0.4.0]: https://github.com/moridin1138/krustyshot/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/moridin1138/krustyshot/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/moridin1138/krustyshot/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/moridin1138/krustyshot/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/moridin1138/krustyshot/releases/tag/v0.1.0

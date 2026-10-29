@@ -1,4 +1,4 @@
-# Rustshot interface text: Spanish.
+# Krustyshot interface text: Spanish.
 # Machine-drafted translation (not yet reviewed by a native speaker).
 
 ## Capture actions
@@ -14,11 +14,11 @@ record-window = Grabar una ventana…
 
 ## Menu-bar / tray menu
 
-menu-about = Acerca de Rustshot
+menu-about = Acerca de Krustyshot
 menu-open-clipboard = Abrir imagen del portapapeles
 menu-open-file = Abrir imagen…
 menu-open-folder = Abrir la carpeta de salida
-menu-quit = Salir de Rustshot
+menu-quit = Salir de Krustyshot
 menu-update-available = Actualización disponible: { $version }…
 menu-settings = Ajustes…
 tray-click-menu = Mostrar el menú
@@ -46,8 +46,8 @@ overlay-record-help-window = Grabar: haz clic en una ventana  ·  Espacio: modo 
 
 ## Recording
 
-recording-bar-title = Grabación de Rustshot
-recording-frame-title = Área de grabación de Rustshot
+recording-bar-title = Grabación de Krustyshot
+recording-frame-title = Área de grabación de Krustyshot
 recording-discard = Descartar
 recording-discard-body = La grabación se detendrá y el vídeo se eliminará. No se puede deshacer.
 recording-discard-tip = Detener y descartar esta grabación
@@ -88,14 +88,14 @@ rec-show-clicks-sub = Aparece un círculo donde haces clic, para que quien lo ve
 rec-system-audio = Sonido del sistema
 rec-system-audio-sub = Graba lo que reproduce tu ordenador
 rec-system-audio-unavailable = Requiere macOS 13 o posterior
-rec-microphone-denied = El acceso al micrófono está desactivado para Rustshot
+rec-microphone-denied = El acceso al micrófono está desactivado para Krustyshot
 
 ## Disk space
 
 disk-change-folder = Cambiar carpeta…
 disk-continue = Continuar de todos modos
 disk-low-body =
-    Solo quedan { $free } ({ $percent } %) libres en el disco donde Rustshot guarda capturas y grabaciones:
+    Solo quedan { $free } ({ $percent } %) libres en el disco donde Krustyshot guarda capturas y grabaciones:
 
     { $folder }
 
@@ -119,7 +119,7 @@ toast-show-finder = Haz clic para mostrarlo en el Finder
 ## Messages
 
 notice-capture-failed = No se pudo capturar
-notice-disk-full-body = El disco estaba casi lleno, así que Rustshot detuvo la grabación y guardó lo que tenía. Libera espacio antes de volver a grabar.
+notice-disk-full-body = El disco estaba casi lleno, así que Krustyshot detuvo la grabación y guardó lo que tenía. Libera espacio antes de volver a grabar.
 notice-disk-full-title = Grabación detenida
 notice-hotkeys-body =
     No se pudieron registrar algunos atajos (puede que otra app los esté usando):
@@ -132,23 +132,23 @@ notice-no-clipboard-image = No hay ninguna imagen en el portapapeles.
 notice-open-image = Abrir imagen
 notice-recording-failed = No se pudo grabar
 notice-no-microphone-title = Grabando sin el micrófono
-notice-no-microphone-body = Rustshot aún no tiene acceso al micrófono. Desactiva y vuelve a activar Micrófono en Ajustes → Grabación para que se te pregunte, o permítelo en Ajustes del Sistema → Privacidad y seguridad → Micrófono.
+notice-no-microphone-body = Krustyshot aún no tiene acceso al micrófono. Desactiva y vuelve a activar Micrófono en Ajustes → Grabación para que se te pregunte, o permítelo en Ajustes del Sistema → Privacidad y seguridad → Micrófono.
 
 ## Screen Recording permission (macOS)
 
 permission-body =
-    Rustshot necesita el permiso de Grabación de pantalla para capturar otras apps. Sin él, macOS solo le deja capturar el fondo del escritorio.
+    Krustyshot necesita el permiso de Grabación de pantalla para capturar otras apps. Sin él, macOS solo le deja capturar el fondo del escritorio.
 
     1. Haz clic en Abrir Ajustes del Sistema.
-    2. En Privacidad y seguridad > Grabación de pantalla, activa Rustshot.
-    3. Haz clic en Salir de Rustshot y vuelve a abrir Rustshot.
+    2. En Privacidad y seguridad > Grabación de pantalla, activa Krustyshot.
+    3. Haz clic en Salir de Krustyshot y vuelve a abrir Krustyshot.
 
-    ¿Rustshot ya está activado pero las capturas siguen sin mostrar ventanas? Haz clic en Restablecer permiso y responde a la solicitud de macOS.
+    ¿Krustyshot ya está activado pero las capturas siguen sin mostrar ventanas? Haz clic en Restablecer permiso y responde a la solicitud de macOS.
 
-    ¿Ejecutas Rustshot desde un terminal? Da el permiso a tu app de terminal.
+    ¿Ejecutas Krustyshot desde un terminal? Da el permiso a tu app de terminal.
 permission-open-settings = Abrir Ajustes del Sistema
 permission-reset = Restablecer permiso
-permission-reset-tip = Eliminar la entrada antigua de Grabación de pantalla de Rustshot y volver a pedirla
+permission-reset-tip = Eliminar la entrada antigua de Grabación de pantalla de Krustyshot y volver a pedirla
 permission-title = Se necesita el permiso de Grabación de pantalla
 
 ## About
@@ -284,7 +284,7 @@ settings-file-name = Nombre del archivo
 settings-folder = Carpeta
 settings-format = Formato
 settings-free-space = Espacio libre
-settings-free-space-low = Este disco está casi lleno. Rustshot avisará antes de capturar; plantéate usar una carpeta en otro disco.
+settings-free-space-low = Este disco está casi lleno. Krustyshot avisará antes de capturar; plantéate usar una carpeta en otro disco.
 settings-free-space-value = { $free } de { $total } ({ $percent } %)
 settings-general = General
 settings-icon-click = Al hacer clic en el icono
@@ -306,7 +306,7 @@ settings-right-click-hint = Haz clic derecho en el icono para ver el menú.
 settings-saving = Guardado
 settings-seconds = { $n } s
 settings-shortcuts = Atajos
-settings-title = Ajustes de Rustshot
+settings-title = Ajustes de Krustyshot
 settings-tray-icon = Icono de la bandeja
 token-date = fecha
 token-time = hora
@@ -331,8 +331,8 @@ update-available = La versión { $version } está disponible.
 update-check = Buscar actualizaciones
 update-checking = Comprobando en GitHub…
 update-download = Descargar
-update-notice-title = Actualización de Rustshot disponible
-update-notice-body = Ya está disponible Rustshot { $version }. Tienes la { $current }.
+update-notice-title = Actualización de Krustyshot disponible
+update-notice-body = Ya está disponible Krustyshot { $version }. Tienes la { $current }.
 update-failed = No se pudieron buscar actualizaciones: { $error }
 update-latest = Tienes la última versión.
 
@@ -356,7 +356,7 @@ upload-link = Enlace en la respuesta
 upload-link-sub = p. ej. $json:data.link$; déjalo vacío si la respuesta es el enlace
 upload-headers = Cabeceras (por ejemplo, una clave de API)
 upload-form = Campos de formulario adicionales
-upload-secrets-note = Los valores de las cabeceras, como las claves de API, se guardan en el archivo de ajustes de Rustshot en este ordenador.
+upload-secrets-note = Los valores de las cabeceras, como las claves de API, se guardan en el archivo de ajustes de Krustyshot en este ordenador.
 upload-test = Probar la subida
 upload-not-ready = Añade un nombre y una dirección que empiece por https:// para usar la subida.
 upload-remove = Quitar
@@ -367,11 +367,11 @@ capture-scrolling = Capturar zona con desplazamiento…
 title-scrolling = Captura con desplazamiento
 overlay-scroll-help-region = Captura con desplazamiento: arrastra solo sobre la parte que se desplaza, como la página o el documento  ·  Espacio: modo ventana  ·  Esc: cancelar
 overlay-scroll-help-window = Captura con desplazamiento: haz clic en la ventana que quieres desplazar  ·  Espacio: modo zona  ·  Esc: cancelar
-scroll-bar-title = Captura con desplazamiento de Rustshot
+scroll-bar-title = Captura con desplazamiento de Krustyshot
 scroll-progress = Desplazando… { $pixels } px
 scroll-hint = Haz clic en cualquier sitio para detener
 scroll-stop = Detener
-scroll-needs-accessibility = La captura con desplazamiento necesita Accesibilidad: permite Rustshot en Ajustes del Sistema y vuelve a intentarlo
+scroll-needs-accessibility = La captura con desplazamiento necesita Accesibilidad: permite Krustyshot en Ajustes del Sistema y vuelve a intentarlo
 scroll-unsupported = La captura con desplazamiento necesita una sesión X11. Wayland no permite que las apps desplacen otras ventanas.
 scroll-limit = Detenida en el tamaño máximo de 25.000 píxeles
 scroll-lost = La página cambió durante el desplazamiento, así que la captura se detuvo antes

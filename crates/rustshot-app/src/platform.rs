@@ -12,10 +12,10 @@ pub fn configure_event_loop<T>(builder: &mut winit::event_loop::EventLoopBuilder
 }
 
 /// Title of eframe's root window, which Rustshot never shows.
-pub const BACKGROUND_TITLE: &str = "Rustshot Background";
+pub const BACKGROUND_TITLE: &str = "Krustyshot Background";
 
 /// Title of the "Saved" / "Copied" toast window.
-pub const TOAST_TITLE: &str = "Rustshot Notification";
+pub const TOAST_TITLE: &str = "Krustyshot Notification";
 
 /// Keep a helper window out of Mission Control, App Exposé and window
 /// cycling (macOS), and on whichever Space is active.
@@ -131,7 +131,7 @@ pub fn hide_background_window() {
     }
 }
 
-pub const OVERLAY_TITLE: &str = "Rustshot Overlay";
+pub const OVERLAY_TITLE: &str = "Krustyshot Overlay";
 
 /// Window title for the overlay on monitor `i`, so each window can be found again.
 pub fn overlay_title(i: usize) -> String {

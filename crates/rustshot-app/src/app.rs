@@ -227,11 +227,17 @@ impl App {
             let body = tr!("notice-hotkeys-body", errors = app.hotkey_errors.join("\n"));
             app.notice(&tr!("notice-hotkeys-title"), &body, false);
         }
-        // `rustshot --settings` opens the Settings window straight away.
+        // `krustyshot --settings` opens the Settings window straight away.
         if std::env::args().any(|a| a == "--settings") {
             app.settings = Some(SettingsWindow::new());
         }
-        log::info!("Rustshot running; config at {:?}", Config::path());
+        log::info!("Krustyshot running; config at {:?}", Config::path());
+        // In the background: on Windows this runs `reg`.
+        std::thread::spawn(|| {
+            if let Err(e) = rustshot_core::autostart::refresh() {
+                log::warn!("updating open at login: {e:#}");
+            }
+        });
         app
     }
 
@@ -992,7 +998,7 @@ impl App {
         let Some((cap, first_frame)) = &mut self.picker else { return };
         let id = egui::ViewportId::from_hash_of("rustshot-picker");
         let builder = egui::ViewportBuilder::default()
-            .with_title("Rustshot")
+            .with_title("Krustyshot")
             .with_inner_size([300.0, 30.0 * choices.len() as f32 + 92.0])
             .with_resizable(false)
             .with_window_level(egui::WindowLevel::AlwaysOnTop);
@@ -1051,7 +1057,7 @@ impl App {
             ];
             let dirty = if ew.editor.is_dirty() { " •" } else { "" };
             let builder = egui::ViewportBuilder::default()
-                .with_title(format!("Rustshot: {}{dirty}", ew.editor.title))
+                .with_title(format!("Krustyshot: {}{dirty}", ew.editor.title))
                 .with_inner_size(size)
                 .with_min_inner_size([620.0, 420.0]);
             let (requests, close_requested) = ctx.show_viewport_immediate(ew.id, builder, |ui, _| {
@@ -1289,7 +1295,7 @@ fn confirm_close(config: &Config, ew: &mut EditorWindow) -> bool {
         return true;
     }
     let answer = rfd::MessageDialog::new()
-        .set_title("Rustshot")
+        .set_title("Krustyshot")
         .set_description(tr!("confirm-save-changes"))
         .set_buttons(rfd::MessageButtons::YesNoCancel)
         .show();

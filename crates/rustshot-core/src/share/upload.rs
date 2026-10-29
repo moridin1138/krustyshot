@@ -113,7 +113,7 @@ impl Uploader {
             UploadMethod::Post => agent.post(&self.url),
             UploadMethod::Put => agent.put(&self.url),
         }
-        .header("User-Agent", concat!("Rustshot/", env!("CARGO_PKG_VERSION")));
+        .header("User-Agent", concat!("Krustyshot/", env!("CARGO_PKG_VERSION")));
         for (k, v) in &self.headers {
             request = request.header(k.as_str(), v.as_str());
         }

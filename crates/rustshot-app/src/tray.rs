@@ -73,7 +73,7 @@ impl Tray {
 
         let builder = TrayIconBuilder::new()
             .with_menu(Box::new(menu))
-            .with_tooltip("Rustshot")
+            .with_tooltip("Krustyshot")
             // With a click action set, left click captures and right click opens the menu.
             .with_menu_on_left_click(config.tray_click == rustshot_core::TrayClick::ShowMenu);
         #[cfg(target_os = "macos")]
