@@ -24,6 +24,10 @@ use crate::tray::{self, Tray};
 use crate::platform;
 use crate::send;
 
+#[cfg(feature = "demo")]
+#[path = "demo.rs"]
+mod demo;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CaptureMode {
     Region,
@@ -138,6 +142,8 @@ pub struct App {
     update_job: Option<Receiver<anyhow::Result<UpdateStatus>>>,
     /// A newer version to offer in the menu: (version, page URL).
     update: Option<(String, String)>,
+    #[cfg(feature = "demo")]
+    demo: Option<demo::Demo>,
 }
 
 impl App {
@@ -214,6 +220,8 @@ impl App {
             update_checked: Instant::now().checked_sub(UPDATE_INTERVAL - UPDATE_FIRST_DELAY).unwrap_or_else(Instant::now),
             update_job: None,
             update: None,
+            #[cfg(feature = "demo")]
+            demo: demo::Demo::from_env(),
         };
 
         // Let macOS show its own permission prompt once (this also adds Rustshot
@@ -230,6 +238,10 @@ impl App {
         // `krustyshot --settings` opens the Settings window straight away.
         if std::env::args().any(|a| a == "--settings") {
             app.settings = Some(SettingsWindow::new());
+        }
+        #[cfg(feature = "demo")]
+        if app.demo.is_some() {
+            demo::prepare(&mut app);
         }
         log::info!("Krustyshot running; config at {:?}", Config::path());
         // In the background: on Windows this runs `reg`.
@@ -779,6 +791,12 @@ impl App {
 
         /// Send a capture to the configured destinations.
     fn deliver(&mut self, cap: Capture) {
+        #[cfg(feature = "demo")]
+        if let Some(demo) = &mut self.demo
+            && demo.take_delivery(&cap)
+        {
+            return;
+        }
         let dests = self.config.destinations.clone();
         if dests.is_empty() || dests.contains(&Destination::Picker) {
             self.picker = Some((cap, true));
@@ -1318,6 +1336,8 @@ impl eframe::App for App {
         self.poll_jobs(ctx);
         self.check_for_updates(ctx);
         self.stress_step(ctx);
+        #[cfg(feature = "demo")]
+        demo::step(self, ctx);
         if self.quit {
             // Never lose a recording by quitting: finish and save it first.
             self.finish_recording(false);
@@ -1332,6 +1352,8 @@ impl eframe::App for App {
             platform::hide_background_window();
             self.background_hidden = true;
         }
+        #[cfg(feature = "demo")]
+        demo::show_page(self, &ctx);
         self.show_overlay(&ctx);
         self.show_recording(&ctx);
         self.show_scrolling(&ctx);

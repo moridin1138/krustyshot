@@ -231,6 +231,14 @@ impl Editor {
         self.start_text_edit(self.doc.elements.len() - 1);
     }
 
+    /// Add finished annotations at once. Used by the app's README screenshots.
+    #[doc(hidden)]
+    pub fn debug_add(&mut self, elements: Vec<Element>) {
+        self.checkpoint();
+        self.doc.elements.extend(elements);
+        self.touched();
+    }
+
     /// The annotated image as it will be saved.
     pub fn flatten(&self) -> RgbaImage {
         export::flatten(&self.doc)

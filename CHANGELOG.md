@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Fixed
+
+- In Settings, a long description (such as the one under **Full resolution** in Recording) ran underneath its switch; it now wraps beside it.
+
 ## [0.6.0] - 2026-10-29
 
 Rustshot is now **Krustyshot**.

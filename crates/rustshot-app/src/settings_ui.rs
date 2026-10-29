@@ -181,7 +181,7 @@ impl SettingsWindow {
             microphones: None,
             upload_test: Arc::default(),
             import_error: None,
-            tour: cfg!(debug_assertions)
+            tour: (cfg!(debug_assertions) || cfg!(feature = "demo"))
                 .then(|| std::env::var_os("RUSTSHOT_SETTINGS_TOUR"))
                 .flatten()
                 .map(|dir| Tour { dir: dir.into(), index: 0, frames: 0 }),
@@ -205,7 +205,8 @@ impl SettingsWindow {
         }
         self.section = Section::ALL[tour.index];
         tour.frames += 1;
-        if tour.frames == 8 {
+        // The first picture waits longer: the new window takes a while to draw.
+        if tour.frames == if tour.index == 0 { 30 } else { 8 } {
             let path = tour.dir.join(format!("{}.png", self.section.slug()));
             match platform::window_number(&tr!("settings-title")) {
                 Some(n) => {
@@ -971,14 +972,18 @@ fn divider(ui: &mut Ui) {
 fn row(ui: &mut Ui, label: &str, sub: Option<&str>, control: impl FnOnce(&mut Ui)) {
     ui.horizontal(|ui| {
         ui.set_min_height(ROW_HEIGHT);
-        ui.vertical(|ui| {
-            ui.add_space(if sub.is_some() { 2.0 } else { 6.0 });
-            ui.label(label);
-            if let Some(sub) = sub {
-                ui.label(RichText::new(sub).small().weak());
-            }
+        // The control first, from the right; the labels get the space that's
+        // left, so a long description wraps before it instead of under it.
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            control(ui);
+            ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
+                ui.add_space(if sub.is_some() { 2.0 } else { 6.0 });
+                ui.label(label);
+                if let Some(sub) = sub {
+                    ui.label(RichText::new(sub).small().weak());
+                }
+            });
         });
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), control);
     });
 }
 

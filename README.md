@@ -1,52 +1,56 @@
 # Krustyshot
 
-A cross-platform screenshot tool modelled on [Greenshot](https://getgreenshot.org/), written in Rust with [egui](https://github.com/emilk/egui). It runs on macOS, Windows and Linux.
+**The Greenshot workflow on every desktop.** Press a key, drag over what you want, mark it up, and send it where it needs to go, on macOS, Windows and Linux. Written in Rust with [egui](https://github.com/emilk/egui).
+
+<p align="center"><img src="docs/images/editor.png" width="820" alt="The Krustyshot editor: a web page annotated with numbered steps, an arrow, a highlight, a box, an ellipse, a blurred area and a speech bubble"></p>
 
 Krustyshot was called Rustshot until version 0.6.0; the name changed because another screenshot app is called Rustshot.
 
-<img src="assets/icons/icon_256.png" width="96" alt="Krustyshot icon">
+## Where it shines
+
+- **Whole pages in one picture.** Scrolling capture scrolls a web page or document for you and joins it into one tall image, with fixed headers and footers appearing once.
+- **Screenshots and screen recordings in one tool.** Record a region, a window or a display to MP4 or GIF, with your microphone and the computer's sound, without leaving the app you use for screenshots.
+- **A real editor, not just a crop tool.** Arrows, numbered steps, speech bubbles, highlights, blur and effects, all editable until you save.
+- **Ten places to send a capture.** Clipboard, file, another app, printer, email, Share, text recognition, or your own upload server, from one quick menu.
+- **One tool, every computer.** The same shortcuts, menus and editor on macOS, Windows and Linux, in English, French, Spanish and German.
+- **Private by default.** No account, no analytics. Nothing leaves your computer unless you print, email, share or upload it; see [what Krustyshot sends](#what-krustyshot-sends-over-the-internet).
 
 ## Features
 
-- Menu-bar / tray icon with capture and recording menus; optionally make a left click start a capture
-- Global hotkeys for region, window, full screen and last region captures
-- Frozen-screen region selection with crosshair, magnifier and a pixel-size readout
-- Window capture: hover to highlight, click to capture (Space switches between region and window mode, like Greenshot)
-- Regions that span several displays, and full-screen capture of all displays
-- Capture last region, capture delay, and optionally the mouse pointer
-- Scrolling capture: drag over a web page or document and Krustyshot scrolls it and joins the screenshots into one tall image (fixed headers and footers appear once)
-- Destination picker after each capture: open in editor, copy, save directly, save as, open in another app, print, email, Share (macOS), copy the text in the image (OCR), and upload to your own server or image host (ShareX `.sxcu` uploaders can be imported)
-- Image editor with Phosphor icons: select, move and resize, rectangle, ellipse, line, arrow, freehand, text, speech bubble, step counter, highlight (marker, spotlight, grey out the rest, magnify), obfuscate (pixelate or blur), crop, drop shadows, undo and redo
-- Effects: drop shadow, torn edges, border, greyscale, invert, rotate, resize
-- Screen recording of a region, a window or a whole display, to MP4 (macOS and Windows) or GIF (all platforms), with quality, resolution and frame-rate settings and a size estimate; MP4s can include the microphone and system sound, and clicks can be shown
-- Low disk space warnings for the screenshots folder, and recordings that stop safely before the disk fills
-- Notifications after saving or copying (click to show the file)
-- English, French, Spanish and German interface, following the system language
-- Open an image from the clipboard or from a file
-- Settings: language, after-capture actions, capture and recording options, shortcut recorder, output folder with free space, Greenshot-style filename pattern, PNG/JPG/BMP/GIF, open at login, check for updates
+### Capture
 
-See [CHANGELOG.md](CHANGELOG.md) for what changed in each version and [docs/ROADMAP.md](docs/ROADMAP.md) for what's planned.
+- **Region:** the screen freezes, then drag an area with a crosshair, a magnifier and a live pixel size. Regions can span several displays.
+- **Window:** hover to highlight a window, click to capture it. Space switches between region and window mode, as in Greenshot.
+- **Full screen:** the display the pointer is on, or all displays together.
+- **Last region:** capture the same area again with one key.
+- **Scrolling region:** see below.
+- **Options:** capture delay, include the mouse pointer or leave it out, and open images from the clipboard or a file.
 
-## Default hotkeys
+### Scrolling capture
 
-| Action | macOS | Windows / Linux |
-|---|---|---|
-| Capture region | ⌥⇧R | Print Screen |
-| Capture window | ⌥⇧W | Alt+Print Screen |
-| Capture full screen | ⌥⇧F | Ctrl+Print Screen |
-| Capture last region | ⌥⇧L | Shift+Print Screen |
-| Capture scrolling region | ⌥⇧S | Ctrl+Alt+Print Screen |
-| Start or stop recording | ⌥⇧V | Ctrl+Shift+Print Screen |
+<img src="docs/images/scrolling.png" width="260" align="right" alt="A whole Wikipedia article captured as one tall image">
 
-Change them in Settings (click a shortcut and press the new keys). macOS keeps ⌘⇧3/4/5 for its own screenshot tool.
+Drag over something taller than the screen, such as a web page, a document or a chat history, and Krustyshot does the scrolling:
 
-## Recording
+- It scrolls, waits for the page to settle, and joins each new part onto the image.
+- Fixed headers and footers appear once, not on every screen.
+- It stops by itself at the bottom, when you click, or at 25,000 pixels.
+- The result goes to the editor, clipboard or any other destination, like any screenshot.
 
-Choose **Record region…**, **Record window…** or **Record full screen** from the menu-bar icon, or press the recording shortcut (⌥⇧V on macOS) and drag a region. A small bar shows the time and file size, with **Stop** and **Discard** (which asks before deleting). When the recording has sound, microphone and speaker icons blink next to the timer; click one to mute or unmute it. Press the shortcut again, or choose **Stop recording** from the menu, to finish. The file is saved to your output folder, and a notification lets you show it.
+<img src="docs/images/scrolling-bar.png" width="380" alt="The scrolling bar showing the height so far and a Stop button">
 
-Settings → Recording chooses MP4 or GIF, the quality, full or half resolution on Retina displays, and the frame rate, and estimates how much space a minute takes. For MP4s you can also record the **microphone** (pick which one) and **system sound** (macOS 13 or later, and Windows), and turn on **Show mouse clicks**. GIFs have no sound. MP4 recording works on macOS and Windows; Linux records GIFs for now. Recordings use one display at a time.
+The picture on the right was taken this way: one drag over a Wikipedia article. On macOS this needs the Accessibility permission (asked the first time); on Linux it needs X11.
 
-### Editor shortcuts
+<br clear="right">
+
+### Edit and annotate
+
+- **Shapes and lines:** rectangle, ellipse, line, arrow and freehand, with colour, thickness, fill and a soft drop shadow.
+- **Text and callouts:** text, speech bubbles with a tail you can point anywhere, and step counters that renumber themselves when one is deleted.
+- **Highlight:** marker, spotlight (darken everything else), grey out the rest, or magnify.
+- **Hide things:** pixelate or blur passwords, names and anything else private.
+- **Image tools:** crop, rotate, resize, border, torn edges, drop shadow, greyscale and invert.
+- Everything stays editable (select, move, resize, delete) until you save, with unlimited undo and redo.
 
 | Key | Action |
 |---|---|
@@ -58,9 +62,65 @@ Settings → Recording chooses MP4 or GIF, the quality, full or half resolution 
 | ⌘Z / ⌘⇧Z | Undo / redo |
 | ⌘S / ⌘⇧S | Save / save as |
 | ⌘C | Copy image |
+| ⌘P | Print |
 | ⌘+ / ⌘− / ⌘0 | Zoom in / out / fit |
 
 On Windows and Linux use Ctrl instead of ⌘.
+
+### Send it anywhere
+
+<img src="docs/images/quick-menu.png" width="240" align="right" alt="The quick menu listing every destination">
+
+After each capture, a quick menu offers every destination, or you can pick the ones that should always happen:
+
+- **Editor:** annotate first, then send from the editor's own menu.
+- **Clipboard** and **Save directly** (to your folder, with a Greenshot-style file name pattern) or **Save as**, in PNG, JPG, BMP or GIF.
+- **Open in another app:** your default image app, or one you choose.
+- **Print**, and **Email** (a new message with the image attached).
+- **Share** on macOS: AirDrop, Messages, Notes and the rest of the Share menu.
+- **Copy text (OCR):** recognises the text in the image and copies it, on your own computer (Vision on macOS, Windows' built-in OCR, Tesseract on Linux).
+- **Upload** to your own server or an image host, and copy the link it returns. Set the address, headers and fields yourself, or import a ShareX uploader (`.sxcu`).
+
+Notifications after saving or copying let you show the file with one click.
+
+<br clear="right">
+
+### Record the screen
+
+<img src="docs/images/recording-bar.png" width="460" alt="The recording bar: a blinking red dot, the time, the file size, microphone and speaker icons, Discard and Stop">
+
+- **Region, window or full screen**, from the menu or the recording shortcut.
+- **MP4** on macOS and Windows (the system's own H.264 encoder) and **GIF** everywhere. GIFs store only what changed between frames, so they stay small.
+- **Sound in MP4s:** the microphone (choose which one) and the computer's own sound (macOS 13 or later, and Windows), mixed into one track. Click the microphone or speaker icon on the bar to mute or unmute it.
+- **Show mouse clicks**, so viewers can follow along.
+- While recording a region or a window, the rest of the display is dimmed and a red line marks the area. The bar, the dimming and the outline never appear in the video.
+- Quality, resolution and frame rate settings, with an estimate of the size per minute. Recordings stop safely and keep what they have if the disk fills up.
+
+Press the recording shortcut (or choose **Stop recording**) to finish. **Discard** asks before deleting.
+
+### Settings and languages
+
+<p align="center"><img src="docs/images/general.png" width="400" alt="Settings, General page">&nbsp;<img src="docs/images/uploads.png" width="400" alt="Settings, Uploads page"></p>
+
+- Every change applies straight away. Record a new shortcut by pressing it.
+- English, French, Spanish and German, following the system language or chosen in Settings.
+- Open at login, a choice of what clicking the menu-bar icon does, notifications, and a daily check for new versions (which you can turn off).
+- Low disk space warnings for your screenshots folder.
+
+## Keyboard shortcuts
+
+| Action | macOS | Windows / Linux |
+|---|---|---|
+| Capture region | ⌥⇧R | Print Screen |
+| Capture window | ⌥⇧W | Alt+Print Screen |
+| Capture full screen | ⌥⇧F | Ctrl+Print Screen |
+| Capture last region | ⌥⇧L | Shift+Print Screen |
+| Capture scrolling region | ⌥⇧S | Ctrl+Alt+Print Screen |
+| Start or stop recording | ⌥⇧V | Ctrl+Shift+Print Screen |
+
+Change them in Settings → Shortcuts. macOS keeps ⌘⇧3/4/5 for its own screenshot tool.
+
+See [CHANGELOG.md](CHANGELOG.md) for what changed in each version and [docs/ROADMAP.md](docs/ROADMAP.md) for what's planned.
 
 ## Install
 
@@ -92,7 +152,7 @@ You do this once per download. Every release is signed with the same Krustyshot 
 - Each release includes `SHA256SUMS.txt`, and GitHub shows each file's checksum on the releases page. To check a download, run `shasum -a 256 Krustyshot-*.zip` (macOS and Linux) or `Get-FileHash Krustyshot-*.zip` (Windows PowerShell), and compare.
 - You can read every line of the source here, and [build Krustyshot yourself](#build-from-source) if you'd rather.
 
-**What Krustyshot sends over the internet:**
+#### What Krustyshot sends over the internet
 
 - **Update check:** a request to GitHub's public API for the latest version number, shortly after start-up and once a day. Turn it off in Settings → General. **Check for updates** in Settings → About asks only when you click it.
 - **Uploads:** only to an uploader you set up yourself (Settings → Uploads), and only when you choose **Upload**.
@@ -131,6 +191,7 @@ The bundle is written to `target/release/bundle/Krustyshot.app` and runs as a me
 | `scripts/bundle-macos.sh` | Package a release build as `Krustyshot.app` (macOS) |
 | `cargo run -p rustshot-editor --example sample -- out.png` | Render every annotation type into a sample image, to check how they look |
 | `cargo run --release -p rustshot-core --example record -- out.mp4 5 medium` | Record the main display for 5 seconds without the app (`.gif` for GIF; add `full` for full resolution, `mic` and `system` for sound; `list` instead of a path lists microphones) |
+| `scripts/readme-screenshots.sh` | Retake the pictures in `docs/images/` (macOS; see the script for what it needs) |
 | `cargo check-windows` | Lint the Windows build from macOS (once: `rustup target add x86_64-pc-windows-gnu`) |
 | `RUSTSHOT_LANG=fr cargo run -p rustshot-app` | Run in a particular language |
 
@@ -153,6 +214,7 @@ Settings live in `rustshot.toml` in the platform config folder:
 ## Credits
 
 - Inspired by [Greenshot](https://getgreenshot.org/) (GPL-3.0). Krustyshot is a new implementation and contains no Greenshot code.
+- The sample page in the screenshots is the Wikipedia article [Screenshot](https://en.wikipedia.org/wiki/Screenshot) (CC BY-SA 4.0). The screenshots are made with `scripts/readme-screenshots.sh`.
 - Icons: [Phosphor Icons](https://phosphoricons.com/) (MIT), via [egui-phosphor](https://github.com/amPerl/egui-phosphor).
 
 ## License

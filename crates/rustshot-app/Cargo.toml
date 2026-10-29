@@ -33,6 +33,10 @@ block2 = "0.6"
 [target."cfg(windows)".dependencies]
 windows = { version = "0.62", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
 
+[features]
+# Screenshots for the README (scripts/readme-screenshots.sh). Never in releases.
+demo = []
+
 [[bin]]
 name = "krustyshot"
 path = "src/main.rs"
