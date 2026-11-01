@@ -2,3 +2,8 @@
 xtask = "run --quiet -p xtask --"
 # Lint the Windows build from macOS (needs `rustup target add x86_64-pc-windows-gnu`).
 check-windows = "clippy --all-targets --target x86_64-pc-windows-gnu -- -D warnings"
+
+# Windows (MSVC, as the release workflow builds it): build the C runtime into the .exe, so
+# it starts on a fresh PC that doesn't have the Visual C++ Redistributable (VCRUNTIME140.dll).
+[target.'cfg(all(windows, target_env = "msvc"))']
+rustflags = ["-C", "target-feature=+crt-static"]

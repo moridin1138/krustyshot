@@ -80,6 +80,12 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          # .cargo/config.toml builds the C runtime in; a fresh PC has no VCRUNTIME140.dll.
+          $exe = "target/${{ matrix.target }}/release/krustyshot.exe"
+          $text = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($exe))
+          foreach ($dll in 'VCRUNTIME140', 'MSVCP140', 'api-ms-win-crt-') {
+            if ($text -match $dll) { throw "$exe needs $dll, which a fresh PC may not have" }
+          }
           $dir = "Krustyshot-$env:GITHUB_REF_NAME-${{ matrix.name }}"
           New-Item -ItemType Directory $dir | Out-Null
           Copy-Item target/${{ matrix.target }}/release/krustyshot.exe $dir/

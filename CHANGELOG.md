@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- Windows: Krustyshot failed to start on a PC without Microsoft's Visual C++ Redistributable ("VCRUNTIME140.dll was not found"). It now includes that runtime.
 - In Settings, a long description (such as the one under **Full resolution** in Recording) ran underneath its switch; it now wraps beside it.
 
 ## [0.6.0] - 2026-10-29
