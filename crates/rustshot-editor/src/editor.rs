@@ -8,7 +8,7 @@ use image::RgbaImage;
 
 use crate::effects::Effect;
 use rustshot_i18n::tr;
-use crate::document::{Document, Element, Handle, HighlightMode, History, Kind, ObfuscateMode, Style, SPEECH_PADDING};
+use crate::document::{AreaShape, Document, Element, Handle, HighlightMode, History, Kind, ObfuscateMode, Style, SPEECH_PADDING};
 use crate::export::{self, arrow_head, contrasting_text, measure_text, speech_radius, speech_tail_base, TEXT_PADDING};
 use crate::raster;
 
@@ -608,6 +608,9 @@ impl Editor {
                     ui.label(tr!("prop-mode"));
                     ui.selectable_value(&mut self.style.obfuscate, ObfuscateMode::Pixelate, tr!("prop-pixelate"));
                     ui.selectable_value(&mut self.style.obfuscate, ObfuscateMode::Blur, tr!("prop-blur"));
+                    ui.label(tr!("prop-shape"));
+                    ui.selectable_value(&mut self.style.area, AreaShape::Rect, tr!("tool-rect"));
+                    ui.selectable_value(&mut self.style.area, AreaShape::Oval, tr!("tool-ellipse"));
                     ui.label(if self.style.obfuscate == ObfuscateMode::Pixelate { tr!("prop-pixel-size") } else { tr!("prop-blur-radius") });
                     ui.add(egui::Slider::new(&mut self.style.strength, 2.0..=50.0).integer());
                 }
@@ -1106,7 +1109,12 @@ fn paint_shapes(painter: &egui::Painter, e: &Element, view: View, opts: Paint, m
                 } else {
                     Color32::from_black_alpha(90)
                 };
-                painter.rect(r, 0.0, fill, Stroke::new(1.0, Color32::WHITE), StrokeKind::Outside);
+                if e.kind == Kind::Obfuscate && s.area == AreaShape::Oval {
+                    painter.add(Shape::ellipse_filled(r.center(), r.size() / 2.0, fill));
+                    painter.add(Shape::ellipse_stroke(r.center(), r.size() / 2.0, Stroke::new(1.0, Color32::WHITE)));
+                } else {
+                    painter.rect(r, 0.0, fill, Stroke::new(1.0, Color32::WHITE), StrokeKind::Outside);
+                }
             }
         }
     }

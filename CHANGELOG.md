@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+
+- The Obfuscate tool can blur or pixelate an **oval** as well as a rectangle: choose Shape → Ellipse in the bar under the toolbar. Hold Shift for a circle.
+
 ### Fixed
 
 - Windows: Krustyshot failed to start on a PC without Microsoft's Visual C++ Redistributable ("VCRUNTIME140.dll was not found"). It now includes that runtime.

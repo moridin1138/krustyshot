@@ -55,6 +55,14 @@ pub enum ObfuscateMode {
     Blur,
 }
 
+/// The outline of an obfuscated area: the dragged rectangle, or the oval
+/// that fits inside it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AreaShape {
+    Rect,
+    Oval,
+}
+
 /// The four highlighter styles from Greenshot.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HighlightMode {
@@ -93,6 +101,7 @@ pub struct Style {
     pub highlight: Color32,
     pub highlight_mode: HighlightMode,
     pub obfuscate: ObfuscateMode,
+    pub area: AreaShape,
     /// Block size for pixelate, radius for blur (image pixels).
     pub strength: f32,
     /// Soft drop shadow under shapes.
@@ -109,6 +118,7 @@ impl Default for Style {
             highlight: Color32::from_rgb(255, 235, 0),
             highlight_mode: HighlightMode::Text,
             obfuscate: ObfuscateMode::Pixelate,
+            area: AreaShape::Rect,
             strength: 12.0,
             shadow: true,
         }

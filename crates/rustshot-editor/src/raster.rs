@@ -3,7 +3,7 @@
 use egui::{Color32, Rect};
 use image::{imageops, Rgba, RgbaImage};
 
-use crate::document::{Element, HighlightMode, Kind, ObfuscateMode};
+use crate::document::{AreaShape, Element, HighlightMode, Kind, ObfuscateMode};
 
 /// Clamp an image-space rect to whole pixels inside the image.
 fn pixel_bounds(img: &RgbaImage, r: Rect) -> Option<(u32, u32, u32, u32)> {
@@ -111,6 +111,34 @@ pub fn magnify(img: &mut RgbaImage, r: Rect, factor: f32) {
     }
 }
 
+/// Apply `effect` to the rect `r`, but keep its changes only inside the oval
+/// that fits `r`, with a soft one-pixel edge.
+pub fn within_oval(img: &mut RgbaImage, r: Rect, effect: impl FnOnce(&mut RgbaImage)) {
+    let Some((x0, y0, w, h)) = pixel_bounds(img, r) else { return };
+    let before = imageops::crop_imm(img, x0, y0, w, h).to_image();
+    effect(img);
+    let (c, rx, ry) = (r.center(), r.width() / 2.0, r.height() / 2.0);
+    if rx < 0.5 || ry < 0.5 {
+        imageops::replace(img, &before, x0 as i64, y0 as i64);
+        return;
+    }
+    for y in 0..h {
+        for x in 0..w {
+            let nx = (x0 + x) as f32 + 0.5 - c.x;
+            let ny = (y0 + y) as f32 + 0.5 - c.y;
+            // Distance outside the edge, roughly in pixels (negative inside).
+            let d = ((nx / rx).powi(2) + (ny / ry).powi(2)).sqrt();
+            let outside = (d - 1.0) * rx.min(ry);
+            let keep = (0.5 - outside).clamp(0.0, 1.0);
+            if keep < 1.0 {
+                let (old, new) = (before.get_pixel(x, y).0, img.get_pixel(x0 + x, y0 + y).0);
+                let mix = |o: u8, n: u8| (o as f32 + (n as f32 - o as f32) * keep).round() as u8;
+                img.put_pixel(x0 + x, y0 + y, Rgba([mix(old[0], new[0]), mix(old[1], new[1]), mix(old[2], new[2]), mix(old[3], new[3])]));
+            }
+        }
+    }
+}
+
 pub fn apply(img: &mut RgbaImage, e: &Element) {
     let r = e.bounds();
     match e.kind {
@@ -120,10 +148,17 @@ pub fn apply(img: &mut RgbaImage, e: &Element) {
             HighlightMode::Grayscale => grey_outside(img, r),
             HighlightMode::Magnify => magnify(img, r, 2.0),
         },
-        Kind::Obfuscate => match e.style.obfuscate {
-            ObfuscateMode::Pixelate => pixelate(img, r, e.style.strength.round() as u32),
-            ObfuscateMode::Blur => blur(img, r, e.style.strength),
-        },
+        Kind::Obfuscate => {
+            let (mode, strength) = (e.style.obfuscate, e.style.strength);
+            let effect = |img: &mut RgbaImage| match mode {
+                ObfuscateMode::Pixelate => pixelate(img, r, strength.round() as u32),
+                ObfuscateMode::Blur => blur(img, r, strength),
+            };
+            match e.style.area {
+                AreaShape::Rect => effect(img),
+                AreaShape::Oval => within_oval(img, r, effect),
+            }
+        }
         _ => {}
     }
 }
@@ -187,6 +222,21 @@ mod tests {
         assert_eq!(img.get_pixel(10, 0).0[0], 255);
         // The pixel at x=2 now shows what was at x=6 (still black).
         assert_eq!(img.get_pixel(2, 0).0[0], 0);
+    }
+
+    #[test]
+    fn oval_leaves_the_corners_alone() {
+        let mut img = RgbaImage::from_fn(20, 20, |x, y| if (x + y) % 2 == 0 { Rgba([255, 255, 255, 255]) } else { Rgba([0, 0, 0, 255]) });
+        let original = img.clone();
+        within_oval(&mut img, Rect::from_min_max(Pos2::ZERO, Pos2::new(20.0, 20.0)), |img| {
+            pixelate(img, Rect::from_min_max(Pos2::ZERO, Pos2::new(20.0, 20.0)), 4)
+        });
+        // Corners are outside the circle: untouched. The middle is pixelated (grey).
+        for (x, y) in [(0, 0), (19, 0), (0, 19), (19, 19), (1, 1)] {
+            assert_eq!(img.get_pixel(x, y), original.get_pixel(x, y), "corner {x},{y}");
+        }
+        let mid = img.get_pixel(10, 10).0;
+        assert!(mid[0] > 60 && mid[0] < 200, "{mid:?}");
     }
 
     #[test]

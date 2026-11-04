@@ -48,7 +48,7 @@ The picture on the right was taken this way: one drag over a Wikipedia article. 
 - **Shapes and lines:** rectangle, ellipse, line, arrow and freehand, with colour, thickness, fill and a soft drop shadow.
 - **Text and callouts:** text, speech bubbles with a tail you can point anywhere, and step counters that renumber themselves when one is deleted.
 - **Highlight:** marker, spotlight (darken everything else), grey out the rest, or magnify.
-- **Hide things:** pixelate or blur passwords, names and anything else private.
+- **Hide things:** pixelate or blur passwords, names, faces and anything else private, in a rectangle or an oval.
 - **Image tools:** crop, rotate, resize, border, torn edges, drop shadow, greyscale and invert.
 - Everything stays editable (select, move, resize, delete) until you save, with unlimited undo and redo.
 

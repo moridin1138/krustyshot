@@ -245,6 +245,7 @@ prop-colour = Colour
 prop-fill = Fill
 prop-line-colour = Line colour
 prop-line-text-colour = Line and text colour
+prop-shape = Shape
 prop-mode = Mode
 prop-no-fill = No fill
 prop-pixel-size = Pixel size
