@@ -38,6 +38,7 @@ Every pull request or change that users would notice adds a line under `## [Unre
    - A region on a Retina display produces the expected pixel size.
    - Each destination works from the quick menu: editor, clipboard, save directly, save as, open in another app (default and a chosen app), print (the dialog appears; cancel is fine), email (a new message with the attachment), Share, copy text (paste the result), and upload (with a test uploader; **Test upload** in Settings → Uploads).
    - Every editor tool, undo and redo, crop, save, and copy (paste into Preview to check).
+   - Zoom: use the + and - buttons, Cmd+plus / Cmd+minus, and Cmd+scroll. From Fit, each step starts at the displayed size. Choose a percentage from the zoom menu, then use Cmd+0 to fit again. Zoom must not change the saved image dimensions.
    - The editor's send menu offers the same destinations, and ⌘P prints.
    - Settings: record a new shortcut and confirm it works straight away; toggle Open at login; Check for updates. **About Krustyshot** in the menu opens Settings → About, and its three buttons open the right GitHub pages.
    - Record a region, a window and a full display (MP4 and GIF); check Stop, Discard, the shortcut toggle, and that the recording bar isn't in the video. Play the files.

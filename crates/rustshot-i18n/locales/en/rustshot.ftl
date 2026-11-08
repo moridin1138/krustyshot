@@ -259,6 +259,8 @@ prop-thickness = Thickness
 
 ## Editor zoom
 
+zoom-in = Zoom in ({ $keys })
+zoom-out = Zoom out ({ $keys })
 zoom-fit = Fit
 zoom-fit-window = Fit to window ({ $keys })
 zoom-label = Zoom: { $zoom }

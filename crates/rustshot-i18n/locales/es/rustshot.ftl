@@ -259,6 +259,8 @@ prop-thickness = Grosor
 
 ## Editor zoom
 
+zoom-in = Acercar ({ $keys })
+zoom-out = Alejar ({ $keys })
 zoom-fit = Ajustar
 zoom-fit-window = Ajustar a la ventana ({ $keys })
 zoom-label = Zoom: { $zoom }

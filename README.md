@@ -50,6 +50,7 @@ The picture on the right was taken this way: one drag over a Wikipedia article. 
 - **Highlight:** marker, spotlight (darken everything else), grey out the rest, or magnify.
 - **Hide things:** pixelate or blur passwords, names, faces and anything else private, in a rectangle or an oval.
 - **Image tools:** crop, rotate, resize, border, torn edges, drop shadow, greyscale and invert.
+- **Zoom:** use the **+** and **-** buttons at the bottom of the editor, or hold Cmd (Ctrl on Windows and Linux) while scrolling. The zoom menu offers fixed percentages and **Fit to window**. Zoom changes only the view, not the saved image.
 - Everything stays editable (select, move, resize, delete) until you save, with unlimited undo and redo.
 
 | Key | Action |

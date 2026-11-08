@@ -107,6 +107,8 @@ There are two kinds of element:
 - **Vector** elements (rectangle, ellipse, line, arrow, freehand, text, speech bubble, step counter) are drawn on top of the image. The canvas paints them with egui; export paints them with tiny-skia. Shadows are a blurred silhouette in the saved image and a quick offset copy on the canvas. Step-counter numbers are not stored: they follow the counters' order in the document, so deleting one renumbers the rest.
 - **Raster** elements (highlight in its four styles, obfuscate) change the pixels underneath. They are baked into the canvas texture whenever the document revision changes, and into the exported image by `raster::composite`.
 
+The status bar has zoom-in and zoom-out buttons beside the zoom menu. Buttons and keyboard shortcuts queue a scale change until the canvas size is known, so the first step from Fit starts at the fitted size. Wheel zoom uses the same path. Zoom affects the view only; document coordinates and exported pixels stay unchanged.
+
 Undo works by snapshot. Before each change the whole `Document` is pushed onto `History`. The base image is behind an `Arc`, so a snapshot only copies the element list, except after a crop, which creates a new base image.
 
 ## Destinations (`rustshot-core::share`)

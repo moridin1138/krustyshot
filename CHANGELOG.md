@@ -6,12 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-08
+
 ### Added
 
+- The image editor now has visible + and - zoom buttons beside the zoom menu.
 - The Obfuscate tool can blur or pixelate an **oval** as well as a rectangle: choose Shape → Ellipse in the bar under the toolbar. Hold Shift for a circle.
 
 ### Fixed
 
+- Zoom steps start at the fitted image size, and wheel zoom updates the image immediately.
 - Windows: Krustyshot failed to start on a PC without Microsoft's Visual C++ Redistributable ("VCRUNTIME140.dll was not found"). It now includes that runtime.
 - In Settings, a long description (such as the one under **Full resolution** in Recording) ran underneath its switch; it now wraps beside it.
 
@@ -139,7 +143,8 @@ First release, licensed under GPL-3.0-or-later.
 - App icon, `cargo xtask icons` to regenerate it, and macOS bundle metadata.
 - CI on macOS, Windows and Linux, and a tag-driven release workflow.
 
-[Unreleased]: https://github.com/moridin1138/krustyshot/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/moridin1138/krustyshot/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/moridin1138/krustyshot/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/moridin1138/krustyshot/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/moridin1138/krustyshot/compare/v0.4.0...v0.5.1
 [0.4.0]: https://github.com/moridin1138/krustyshot/compare/v0.3.0...v0.4.0

@@ -259,6 +259,8 @@ prop-thickness = Épaisseur
 
 ## Editor zoom
 
+zoom-in = Zoom avant ({ $keys })
+zoom-out = Zoom arrière ({ $keys })
 zoom-fit = Ajusté
 zoom-fit-window = Ajuster à la fenêtre ({ $keys })
 zoom-label = Zoom : { $zoom }

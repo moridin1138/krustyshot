@@ -175,6 +175,8 @@ pub struct Editor {
     crop_rect: Option<Rect>,
     /// Zoom relative to 100% (one image pixel per physical pixel). `None` = fit.
     zoom: Option<f32>,
+    /// Applied once the current canvas size is known, so steps start at the fitted size.
+    pending_zoom: f32,
     texture: Option<TextureHandle>,
     texture_rev: u64,
     revision: u64,
@@ -205,6 +207,7 @@ impl Editor {
             drag: Drag::None,
             crop_rect: None,
             zoom: None,
+            pending_zoom: 1.0,
             texture: None,
             texture_rev: u64::MAX,
             revision: 0,
@@ -475,13 +478,14 @@ impl Editor {
             self.apply_crop();
         }
         if ui.input_mut(|i| i.consume_key(cmd, Key::Plus) || i.consume_key(cmd, Key::Equals)) {
-            self.zoom = Some((self.zoom.unwrap_or(1.0) * 1.25).min(16.0));
+            self.pending_zoom *= 1.25;
         }
         if ui.input_mut(|i| i.consume_key(cmd, Key::Minus)) {
-            self.zoom = Some((self.zoom.unwrap_or(1.0) / 1.25).max(0.05));
+            self.pending_zoom /= 1.25;
         }
         if ui.input_mut(|i| i.consume_key(cmd, Key::Num0)) {
             self.zoom = None;
+            self.pending_zoom = 1.0;
         }
         if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape)) {
             if self.crop_rect.is_some() {
@@ -663,6 +667,12 @@ impl Editor {
             let (w, h) = self.image_size();
             ui.label(format!("{w} × {h} px"));
             ui.separator();
+            if ui.button("-").on_hover_text(tr!("zoom-out", keys = keys("Mod+-"))).clicked() {
+                self.pending_zoom /= 1.25;
+            }
+            if ui.button("+").on_hover_text(tr!("zoom-in", keys = keys("Mod++"))).clicked() {
+                self.pending_zoom *= 1.25;
+            }
             let zoom_label = match self.zoom {
                 Some(z) => format!("{:.0}%", z * 100.0),
                 None => tr!("zoom-fit"),
@@ -670,10 +680,14 @@ impl Editor {
             ui.menu_button(tr!("zoom-label", zoom = zoom_label), |ui| {
                 if ui.button(tr!("zoom-fit-window", keys = keys("Mod+0"))).clicked() {
                     self.zoom = None;
+                    self.pending_zoom = 1.0;
+                    ui.close();
                 }
                 for z in [0.25, 0.5, 1.0, 2.0, 4.0] {
                     if ui.button(format!("{:.0}%", z * 100.0)).clicked() {
                         self.zoom = Some(z);
+                        self.pending_zoom = 1.0;
+                        ui.close();
                     }
                 }
             });
@@ -697,6 +711,16 @@ impl Editor {
         self.texture_rev = self.revision;
     }
 
+    fn resolve_zoom(&mut self, fit: f32) -> f32 {
+        let current = self.zoom.unwrap_or(fit);
+        if self.pending_zoom != 1.0 {
+            // A very tall image can fit below 5%; zooming out must not enlarge it.
+            self.zoom = Some((current * self.pending_zoom).clamp(fit.min(0.05), 16.0));
+            self.pending_zoom = 1.0;
+        }
+        self.zoom.unwrap_or(fit)
+    }
+
     fn canvas(&mut self, ui: &mut Ui) {
         self.update_texture(ui);
         // Keep text boxes, counters and speech bubbles sized to their content.
@@ -708,13 +732,14 @@ impl Editor {
         let img_size = self.doc.size();
         let avail = ui.available_size();
         let fit = ((avail.x - 16.0) / img_size.x).min((avail.y - 16.0) / img_size.y).min(1.0 / ppp).max(0.01);
-        let scale = self.zoom.map_or(fit, |z| z / ppp);
 
         // Ctrl/Cmd + scroll wheel zooms.
         let zoom_delta = ui.input(|i| if i.modifiers.command { i.zoom_delta() } else { 1.0 });
-        if zoom_delta != 1.0 {
-            self.zoom = Some((scale * ppp * zoom_delta).clamp(0.05, 16.0));
+        self.pending_zoom *= zoom_delta;
+        if self.pending_zoom != 1.0 {
+            ui.ctx().request_repaint();
         }
+        let scale = self.resolve_zoom(fit * ppp) / ppp;
 
         egui::ScrollArea::both().auto_shrink([false, false]).show(ui, |ui| {
             let size = (img_size * scale).max(ui.available_size());
@@ -1150,4 +1175,39 @@ fn paint_crop(painter: &egui::Painter, crop: Rect, image: Rect) {
         }
     }
     painter.rect_stroke(crop, 0.0, Stroke::new(1.5, Color32::WHITE), StrokeKind::Middle);
+}
+
+#[cfg(test)]
+mod zoom_tests {
+    use super::*;
+
+    #[test]
+    fn zoom_steps_start_at_fit_and_apply_once() {
+        let mut editor = Editor::new(RgbaImage::new(1, 1), "test");
+        editor.pending_zoom = 1.25;
+        assert_eq!(editor.resolve_zoom(0.4), 0.5);
+        assert_eq!(editor.resolve_zoom(0.4), 0.5);
+        editor.pending_zoom = 1.0 / 1.25;
+        assert_eq!(editor.resolve_zoom(0.4), 0.4);
+    }
+
+    #[test]
+    fn zoom_out_does_not_enlarge_a_tall_fitted_image() {
+        let mut editor = Editor::new(RgbaImage::new(1, 1), "test");
+        editor.pending_zoom = 1.0 / 1.25;
+        assert_eq!(editor.resolve_zoom(0.02), 0.02);
+    }
+
+    #[test]
+    fn manual_zoom_is_bounded_and_fit_tracks_window_size() {
+        let mut editor = Editor::new(RgbaImage::new(1, 1), "test");
+        assert_eq!(editor.resolve_zoom(0.4), 0.4);
+        assert_eq!(editor.resolve_zoom(0.6), 0.6);
+        editor.zoom = Some(16.0);
+        editor.pending_zoom = 1.25;
+        assert_eq!(editor.resolve_zoom(0.4), 16.0);
+        editor.zoom = Some(0.05);
+        editor.pending_zoom = 1.0 / 1.25;
+        assert_eq!(editor.resolve_zoom(0.4), 0.05);
+    }
 }
